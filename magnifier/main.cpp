@@ -46,12 +46,6 @@ int main(int argc, char** argv){
                 explorer.PrintFunction(std::stoul(args[1], nullptr, 10));
 
             }},
-            {"hello", [](const std::vector<std::string>& args) {
-
-                std::cout << "hello world command" << std::endl;
-                for (const std::string& val : args)
-                    std::cout << val << std::endl;
-            }},
     };
 
     while (true) {
