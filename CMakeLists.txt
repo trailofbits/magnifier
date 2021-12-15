@@ -13,10 +13,10 @@ list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
 
 add_library(magnifier STATIC
-        magnifier/BitcodeExplorer.cpp
-        magnifier/BitcodeExplorer.h
-        magnifier/IDCommentWriter.cpp
-        magnifier/IDCommentWriter.h
+        lib/BitcodeExplorer.cpp
+        include/magnifier/BitcodeExplorer.h
+        lib/IDCommentWriter.cpp
+        lib/IDCommentWriter.h
         )
 target_compile_features(magnifier PUBLIC cxx_std_17)
 
@@ -25,9 +25,23 @@ target_link_libraries(magnifier PUBLIC LLVM)
 target_compile_definitions(magnifier PUBLIC ${LLVM_DEFINITIONS})
 target_include_directories(magnifier SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS})
 target_link_directories(magnifier PUBLIC ${LLVM_LIBRARY_DIRS})
-
+target_include_directories(magnifier
+        PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        )
 
 add_executable(repl)
-target_sources(repl PRIVATE repl/main.cpp)
+target_sources(repl PRIVATE bin/repl/main.cpp)
 target_link_libraries(repl PRIVATE magnifier)
-
+target_include_directories(repl
+        PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        )

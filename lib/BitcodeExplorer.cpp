@@ -6,17 +6,17 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/ValueHandle.h"
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Support/ToolOutputFile.h"
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/Metadata.h>
+#include <llvm/IR/ValueHandle.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Support/ToolOutputFile.h>
 
-#include "BitcodeExplorer.h"
+#include <magnifier/BitcodeExplorer.h>
 #include "IDCommentWriter.h"
 
 BitcodeExplorer::BitcodeExplorer(llvm::LLVMContext &llvm_context)

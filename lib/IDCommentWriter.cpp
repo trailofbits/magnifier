@@ -6,10 +6,10 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/Support/FormattedStream.h"
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/Support/FormattedStream.h>
 
 #include "IDCommentWriter.h"
 

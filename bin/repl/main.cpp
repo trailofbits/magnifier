@@ -6,7 +6,6 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "../magnifier/BitcodeExplorer.h"
 
 #include <iostream>
 #include <memory>
@@ -17,13 +16,15 @@
 #include <functional>
 #include <fstream>
 
+#include <magnifier/BitcodeExplorer.h>
+
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/FileSystem.h>
-#include "llvm/Support/InitLLVM.h"
+#include <llvm/Support/InitLLVM.h>
 
 std::vector<std::string> split(const std::string &input, char delimiter) {
     std::stringstream ss(input);
