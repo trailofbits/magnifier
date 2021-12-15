@@ -1,5 +1,5 @@
 .idea/
-cmake*/
+*build*/
 CMakeFiles/
 
 *.bc

@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2019-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
 #ifndef MAGNIFIER_BITCODEEXPLORER_H
 #define MAGNIFIER_BITCODEEXPLORER_H
 
@@ -15,6 +23,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -22,24 +31,29 @@
 #include "llvm/Support/FileSystem.h"
 
 #include "IDCommentWriter.h"
-using fid_t = unsigned long;
+
+using ValueId = unsigned long;
+
 class BitcodeExplorer {
 
 private:
 
-    llvm::LLVMContext Context;
-    llvm::ExitOnError ExitOnErr;
+    llvm::LLVMContext &llvm_context;
+    std::unique_ptr<llvm::AssemblyAnnotationWriter> annotator;
     std::vector<std::unique_ptr<llvm::Module>> opened_modules;
-    std::map<fid_t , llvm::Function*> function_map;
-    fid_t function_counter;
+    std::map<ValueId, llvm::WeakVH> function_map;
+    ValueId value_id_counter;
 
 public:
-    BitcodeExplorer(): function_map(), Context(), ExitOnErr(), function_counter(0) {
-        ExitOnErr.setBanner("llvm error: ");
+    explicit BitcodeExplorer(llvm::LLVMContext &llvm_context) : function_map(), llvm_context(llvm_context), value_id_counter(0) {
+        annotator = std::make_unique<IDCommentWriter>();
     }
-    bool OpenFile(const std::string& filename);
-    void ListFunctions();
-    void PrintFunction(fid_t function_id);
+
+    bool TakeModule(std::unique_ptr<llvm::Module> module);
+
+    void ForEachFunction(const std::function<void(ValueId, llvm::Function &)>& callback);
+
+    bool PrintFunction(ValueId function_id, llvm::raw_ostream &output_stream);
 };
 
 
