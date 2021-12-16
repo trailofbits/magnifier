@@ -12,11 +12,12 @@
 #include <llvm/IR/AssemblyAnnotationWriter.h>
 
 namespace llvm {
-    class Instruction;
-    class formatted_raw_ostream;
-    class Function;
+class Instruction;
+class formatted_raw_ostream;
+class Function;
 } // namespace llvm
 
+namespace magnifier {
 class IDCommentWriter : public llvm::AssemblyAnnotationWriter {
 private:
     unsigned md_explorer_id;
@@ -27,3 +28,4 @@ public:
 
     void emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &OS) override;
 };
+}

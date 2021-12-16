@@ -6,16 +6,6 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <map>
-#include <functional>
-#include <fstream>
-
 #include <magnifier/BitcodeExplorer.h>
 
 #include <llvm/IR/LLVMContext.h>
@@ -25,6 +15,15 @@
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/InitLLVM.h>
+
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <map>
+#include <functional>
+#include <fstream>
 
 std::vector<std::string> split(const std::string &input, char delimiter) {
     std::stringstream ss(input);
@@ -42,7 +41,7 @@ int main(int argc, char **argv) {
     llvm::ExitOnError llvm_exit_on_err;
     llvm_exit_on_err.setBanner("llvm error: ");
 
-    BitcodeExplorer explorer(llvm_context);
+    magnifier::BitcodeExplorer explorer(llvm_context);
 
     std::error_code error_code;
     std::unique_ptr<llvm::ToolOutputFile> tool_output = std::make_unique<llvm::ToolOutputFile>("-", error_code,llvm::sys::fs::OF_Text);
@@ -83,7 +82,7 @@ int main(int argc, char **argv) {
                     return;
                 }
 
-                explorer.ForEachFunction([](ValueId function_id, llvm::Function &function) -> void {
+                explorer.ForEachFunction([](magnifier::ValueId function_id, llvm::Function &function) -> void {
                     if (function.hasName()) {
                         std::cout << function_id << " " << function.getName().str() << std::endl;
                     }
@@ -96,7 +95,7 @@ int main(int argc, char **argv) {
                     return;
                 }
 
-                ValueId function_id = std::stoul(args[1], nullptr, 10);
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
                 if (!explorer.PrintFunction(function_id, tool_output->os())) {
                     std::cout << "Function not found: " << function_id << std::endl;
                 }

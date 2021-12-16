@@ -12,19 +12,21 @@
 #include <string>
 #include <vector>
 #include <map>
-
-class IDCommentWriter;
+#include <cstdint>
 
 namespace llvm {
-    class AssemblyAnnotationWriter;
-    class Function;
-    class LLVMContext;
-    class Module;
-    class raw_ostream;
-    class WeakVH;
+class AssemblyAnnotationWriter;
+class Function;
+class LLVMContext;
+class Module;
+class raw_ostream;
+class WeakVH;
 }  // namespace llvm
 
-using ValueId = unsigned long;
+namespace magnifier {
+class IDCommentWriter;
+
+using ValueId = uint64_t;
 
 class BitcodeExplorer {
 
@@ -42,9 +44,10 @@ public:
 
     ~BitcodeExplorer();
 
-    bool TakeModule(std::unique_ptr<llvm::Module> module);
+    void TakeModule(std::unique_ptr<llvm::Module> module);
 
     void ForEachFunction(const std::function<void(ValueId, llvm::Function &)> &callback);
 
     bool PrintFunction(ValueId function_id, llvm::raw_ostream &output_stream);
 };
+}

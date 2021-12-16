@@ -6,6 +6,9 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
+#include <magnifier/BitcodeExplorer.h>
+
+#include "IDCommentWriter.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
@@ -16,21 +19,20 @@
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/ToolOutputFile.h>
 
-#include <magnifier/BitcodeExplorer.h>
-#include "IDCommentWriter.h"
-
+namespace magnifier {
 BitcodeExplorer::BitcodeExplorer(llvm::LLVMContext &llvm_context)
         : llvm_context(llvm_context),
           md_explorer_id(llvm_context.getMDKindID("explorer.id")),
           annotator(std::make_unique<IDCommentWriter>(md_explorer_id)),
           function_map(),
-          value_id_counter(0) {}
+          value_id_counter(1) {}
 
-bool BitcodeExplorer::TakeModule(std::unique_ptr<llvm::Module> module) {
+void BitcodeExplorer::TakeModule(std::unique_ptr<llvm::Module> module) {
     llvm::LLVMContext &module_context = module->getContext();
     assert(std::addressof(module_context) == std::addressof(llvm_context));
 
     for (auto &function: module->functions()) {
+        if (function.isDeclaration() || function.isIntrinsic()) { continue; }
         ValueId function_id = value_id_counter++;
 
         llvm::MDNode *mdnode = llvm::MDNode::get(module_context, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(module_context, llvm::APInt(64, function_id, false))));
@@ -38,8 +40,6 @@ bool BitcodeExplorer::TakeModule(std::unique_ptr<llvm::Module> module) {
         function_map.emplace(function_id, &function);
     }
     opened_modules.push_back(std::move(module));
-
-    return true;
 }
 
 void BitcodeExplorer::ForEachFunction(const std::function<void(ValueId, llvm::Function &)> &callback) {
@@ -62,3 +62,4 @@ bool BitcodeExplorer::PrintFunction(ValueId function_id, llvm::raw_ostream &outp
 }
 
 BitcodeExplorer::~BitcodeExplorer() = default;
+}

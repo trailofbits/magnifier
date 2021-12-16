@@ -14,11 +14,20 @@ find_package(Filesystem REQUIRED)
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
-        include/magnifier/BitcodeExplorer.h
         lib/IDCommentWriter.cpp
         lib/IDCommentWriter.h
         )
+
 target_compile_features(magnifier PUBLIC cxx_std_17)
+set(magnifier_PUBLIC_HEADER_DIR "${PROJECT_SOURCE_DIR}/include/magnifier")
+set(magnifier_PUBLIC_HEADERS
+        "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
+        )
+set_target_properties(magnifier
+        PROPERTIES
+        PUBLIC_HEADER "${magnifier_PUBLIC_HEADERS}"
+        LINKER_LANGUAGE CXX
+        )
 
 find_package(LLVM REQUIRED CONFIG)
 target_link_libraries(magnifier PUBLIC LLVM)
