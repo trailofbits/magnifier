@@ -100,6 +100,20 @@ int main(int argc, char **argv) {
                     std::cout << "Function not found: " << function_id << std::endl;
                 }
             }},
+            // Inline function call: `ic <instruction_id>`
+            {"ic", [&explorer, &tool_output](const std::vector<std::string> &args) -> void {
+                if (args.size() != 2) {
+                    std::cout << "Usage: ic <instruction_id> - Inline function call" << std::endl;
+                    return;
+                }
+
+                magnifier::ValueId instruction_id = std::stoul(args[1], nullptr, 10);
+                if (magnifier::ValueId cloned_function_id = explorer.InlineFunctionCall(instruction_id, std::function<void(llvm::Function *)>())) {
+                    explorer.PrintFunction(cloned_function_id, tool_output->os());
+                } else {
+                    std::cout << "Inline function call failed for id:  " << instruction_id << std::endl;
+                }
+            }},
     };
 
     while (true) {

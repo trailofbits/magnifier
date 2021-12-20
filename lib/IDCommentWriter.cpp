@@ -6,9 +6,9 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "IDCommentWriter.h"
+#include "IdCommentWriter.h"
 
-#include "magnifier/BitcodeExplorer.h"
+#include <magnifier/BitcodeExplorer.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Constants.h>
@@ -16,15 +16,18 @@
 
 
 namespace magnifier {
-IDCommentWriter::IDCommentWriter(unsigned md_explorer_id) : md_explorer_id(md_explorer_id) {}
+IdCommentWriter::IdCommentWriter(BitcodeExplorer &explorer) : explorer(explorer) {}
 
-void IDCommentWriter::emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &OS) {
-    OS << "XXX";
+void IdCommentWriter::emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &OS) {
+    ValueId instruction_id = explorer.GetExplorerId(*instruction);
+    ValueId source_id = explorer.GetSourceId(*instruction);
+    OS << instruction_id << "/" << source_id;
 }
 
-void IDCommentWriter::emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &OS) {
-    ValueId function_id = cast<llvm::ConstantInt>(cast<llvm::ConstantAsMetadata>(function->getMetadata(md_explorer_id)->getOperand(0))->getValue())->getZExtValue();
-    OS << "id: " << function_id;
+void IdCommentWriter::emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &OS) {
+    ValueId function_id = explorer.GetExplorerId(*function);
+    ValueId source_id = explorer.GetSourceId(*function);
+    OS << function_id << "/" << source_id;
 }
 }
 

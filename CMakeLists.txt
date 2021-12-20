@@ -14,8 +14,8 @@ find_package(Filesystem REQUIRED)
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
-        lib/IDCommentWriter.cpp
-        lib/IDCommentWriter.h
+        lib/IdCommentWriter.cpp
+        lib/IdCommentWriter.h
         )
 
 target_compile_features(magnifier PUBLIC cxx_std_17)
