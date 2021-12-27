@@ -108,7 +108,12 @@ int main(int argc, char **argv) {
                 }
 
                 magnifier::ValueId instruction_id = std::stoul(args[1], nullptr, 10);
-                if (magnifier::ValueId cloned_function_id = explorer.InlineFunctionCall(instruction_id, std::function<void(llvm::Function *)>())) {
+                if (magnifier::ValueId cloned_function_id = explorer.InlineFunctionCall(instruction_id,std::function<void(llvm::Function *)>(),[&tool_output](llvm::Use *use, llvm::Value *sub_val) {
+                    tool_output->os() << "user: ";
+                    use->getUser()->print(tool_output->os());
+                    tool_output->os() << "\n";
+                    return sub_val;
+                })) {
                     explorer.PrintFunction(cloned_function_id, tool_output->os());
                 } else {
                     std::cout << "Inline function call failed for id:  " << instruction_id << std::endl;

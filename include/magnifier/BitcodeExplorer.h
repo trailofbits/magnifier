@@ -13,6 +13,7 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <llvm/IR/Type.h>
 
 namespace llvm {
 class AssemblyAnnotationWriter;
@@ -22,6 +23,8 @@ class LLVMContext;
 class Module;
 class raw_ostream;
 class WeakVH;
+class Value;
+class Use;
 }  // namespace llvm
 
 namespace magnifier {
@@ -42,8 +45,6 @@ private:
     std::map<ValueId, llvm::WeakVH> instruction_map;
     ValueId value_id_counter;
 
-    llvm::Function *WithClonedFunction(llvm::Function *function, const std::function<void(llvm::Function *)> &callback);
-
     [[nodiscard]] static ValueId GetIntMetadata(const llvm::Function &function, unsigned kind_id) ;
 
     [[nodiscard]] static ValueId GetIntMetadata(const llvm::Instruction &instruction, unsigned kind_id) ;
@@ -53,6 +54,10 @@ private:
     void SetIntMetadata(llvm::Instruction &instruction, ValueId value, unsigned kind_id) const;
 
     void UpdateMetadata(llvm::Function &function);
+
+    static void ElideSubstitutionHooks(llvm::Function &function, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func);
+
+    [[nodiscard]] static std::string GetSubstituteHookName(llvm::Type::TypeID type_id) ;
 
 public:
     explicit BitcodeExplorer(llvm::LLVMContext &llvm_context);
@@ -65,7 +70,7 @@ public:
 
     bool PrintFunction(ValueId function_id, llvm::raw_ostream &output_stream);
 
-    ValueId InlineFunctionCall(ValueId instruction_id, const std::function<void(llvm::Function *)> &resolve_declaration);
+    ValueId InlineFunctionCall(ValueId instruction_id, const std::function<void(llvm::Function *)> &resolve_declaration, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func);
 
     [[nodiscard]] ValueId GetExplorerId(const llvm::Function &function) const;
 
