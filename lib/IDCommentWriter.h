@@ -25,8 +25,12 @@ private:
 public:
     explicit IdCommentWriter(BitcodeExplorer &explorer);
 
-    void emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &OS) override;
+    void emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &os) override;
 
-    void emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &OS) override;
+    void emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &os) override;
+
+    void emitBasicBlockStartAnnot(const llvm::BasicBlock *block, llvm::formatted_raw_ostream &os) override;
+
+    void emitBasicBlockEndAnnot(const llvm::BasicBlock *block, llvm::formatted_raw_ostream &os) override;
 };
 }

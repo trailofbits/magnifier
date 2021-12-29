@@ -22,6 +22,8 @@ target_compile_features(magnifier PUBLIC cxx_std_17)
 set(magnifier_PUBLIC_HEADER_DIR "${PROJECT_SOURCE_DIR}/include/magnifier")
 set(magnifier_PUBLIC_HEADERS
         "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/Result.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/IFunctionResolver.h"
         )
 set_target_properties(magnifier
         PROPERTIES
