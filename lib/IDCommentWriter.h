@@ -18,14 +18,19 @@ class Function;
 } // namespace llvm
 
 namespace magnifier {
-class IDCommentWriter : public llvm::AssemblyAnnotationWriter {
+class BitcodeExplorer;
+class IdCommentWriter : public llvm::AssemblyAnnotationWriter {
 private:
-    unsigned md_explorer_id;
+    BitcodeExplorer &explorer;
 public:
-    explicit IDCommentWriter(unsigned md_explorer_id);
+    explicit IdCommentWriter(BitcodeExplorer &explorer);
 
-    void emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &OS) override;
+    void emitInstructionAnnot(const llvm::Instruction *instruction, llvm::formatted_raw_ostream &os) override;
 
-    void emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &OS) override;
+    void emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &os) override;
+
+    void emitBasicBlockStartAnnot(const llvm::BasicBlock *block, llvm::formatted_raw_ostream &os) override;
+
+    void emitBasicBlockEndAnnot(const llvm::BasicBlock *block, llvm::formatted_raw_ostream &os) override;
 };
 }

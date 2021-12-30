@@ -14,14 +14,17 @@ find_package(Filesystem REQUIRED)
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
-        lib/IDCommentWriter.cpp
-        lib/IDCommentWriter.h
+        lib/IdCommentWriter.cpp
+        lib/IdCommentWriter.h
         )
 
 target_compile_features(magnifier PUBLIC cxx_std_17)
 set(magnifier_PUBLIC_HEADER_DIR "${PROJECT_SOURCE_DIR}/include/magnifier")
 set(magnifier_PUBLIC_HEADERS
         "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/Result.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/IFunctionResolver.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/ISubstitionObserver.h"
         )
 set_target_properties(magnifier
         PROPERTIES
