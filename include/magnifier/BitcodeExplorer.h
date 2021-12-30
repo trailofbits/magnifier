@@ -34,6 +34,7 @@ class BasicBlock;
 namespace magnifier {
 class IdCommentWriter;
 class IFunctionResolver;
+class ISubstitutionObserver;
 
 using ValueId = uint64_t;
 static constexpr ValueId kInvalidValueId = 0;
@@ -41,6 +42,7 @@ enum class ValueIdKind {
     kOriginal,  // Corresponds with `!explorer.source_id`.
     kDerived,  // Corresponds with `!explorer.id`.
     kBlock,    // Corresponds with `!explorer.block_id`.
+    kSubstitution, // Corresponds with `!explorer.substitution_kind_id`.
 };
 
 enum class FunctionKind {
@@ -75,6 +77,10 @@ private:
     // terminator instructions of basic blocks. It serves a similar purpose as `!explorer.id`
     // but for uniquely identifying `BasicBlock` values.
     const unsigned md_explorer_block_id;
+    // ID of the `!explorer.substitution_kind_id` metadata. This metadata should only be
+    // attached to call instructions to the substitution hook function. It helps determine
+    // the `SubstitutionKind` of that call.
+    const unsigned md_explorer_substitution_kind_id;
     // Annotator object used for annotating function disassembly. It prints the various metadata
     // attached to each value.
     const std::unique_ptr<llvm::AssemblyAnnotationWriter> annotator;
@@ -98,7 +104,7 @@ private:
     void UpdateMetadata(llvm::Function &function);
 
     // Elide all substitute hooks present in `function`. Uses `substitute_value_func` to guide the substitution process
-    void ElideSubstitutionHooks(llvm::Function &function, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func);
+    void ElideSubstitutionHooks(llvm::Function &function, ISubstitutionObserver &substitution_observer);
 
     // Convert from opaque type `ValueIdKind` to actual llvm `kind_id`.
     [[nodiscard]] unsigned ValueIdKindToKindId(ValueIdKind kind) const;
@@ -123,7 +129,7 @@ public:
     bool PrintFunction(ValueId function_id, llvm::raw_ostream &output_stream);
 
     // Inline a call instruction
-    Result<ValueId, InlineError> InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func);
+    Result<ValueId, InlineError> InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, ISubstitutionObserver &substitution_observer);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;

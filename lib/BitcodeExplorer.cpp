@@ -9,6 +9,7 @@
 #include <magnifier/BitcodeExplorer.h>
 
 #include <magnifier/IFunctionResolver.h>
+#include <magnifier/ISubstitutionObserver.h>
 #include "IdCommentWriter.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -35,12 +36,12 @@
 namespace magnifier {
 namespace {
 
-[[nodiscard]] std::string GetSubstituteHookName(llvm::Type *type) {
+[[nodiscard]] static std::string GetSubstituteHookName(llvm::Type *type) {
     return llvm::formatv("substitute_hook_{0}", reinterpret_cast<uintptr_t>(type)).str();
 }
 
 // Try to verify a module.
-bool VerifyModule(llvm::Module *module) {
+static bool VerifyModule(llvm::Module *module) {
     std::string error;
     llvm::raw_string_ostream error_stream(error);
     if (llvm::verifyModule(*module, &error_stream)) {
@@ -58,6 +59,7 @@ BitcodeExplorer::BitcodeExplorer(llvm::LLVMContext &llvm_context)
       md_explorer_id(llvm_context.getMDKindID("explorer.id")),
       md_explorer_source_id(llvm_context.getMDKindID("explorer.source_id")),
       md_explorer_block_id(llvm_context.getMDKindID("explorer.block_id")),
+      md_explorer_substitution_kind_id(llvm_context.getMDKindID("explorer.substitution_kind_id")),
       annotator(std::make_unique<IdCommentWriter>(*this)),
       function_map(),
       instruction_map(),
@@ -102,7 +104,7 @@ bool BitcodeExplorer::PrintFunction(ValueId function_id, llvm::raw_ostream &outp
     return true;
 }
 
-Result<ValueId, InlineError> BitcodeExplorer::InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func) {
+Result<ValueId, InlineError> BitcodeExplorer::InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, ISubstitutionObserver &substitution_observer) {
     auto instruction_pair = instruction_map.find(instruction_id);
     if (instruction_pair == instruction_map.end()) {
         return InlineError::kInstructionNotFound;
@@ -209,6 +211,7 @@ Result<ValueId, InlineError> BitcodeExplorer::InlineFunctionCall(ValueId instruc
     builder.SetInsertPoint(&entry, entry.begin());
     for (llvm::Argument &arg : cloned_called_function->args()) {
         llvm::CallInst *call_inst = builder.CreateCall(GetHookFunction(arg.getType(), func_module), {&arg}, "temp_val");
+        SetId(*call_inst, static_cast<std::underlying_type_t<SubstitutionKind>>(SubstitutionKind::kArgument), ValueIdKind::kSubstitution);
 
         arg.replaceUsesWithIf(call_inst, [call_inst](const llvm::Use &use) -> bool {
             return use.getUser() != call_inst;
@@ -284,6 +287,7 @@ Result<ValueId, InlineError> BitcodeExplorer::InlineFunctionCall(ValueId instruc
         cloned_call_base->setName("to_delete");
 
         llvm::CallInst *substituted_call = llvm::CallInst::Create(GetHookFunction(cloned_call_base->getType(), func_module), { dup_call_base }, original_name, cloned_call_base);
+        SetId(*substituted_call, static_cast<std::underlying_type_t<SubstitutionKind>>(SubstitutionKind::kReturnValue), ValueIdKind::kSubstitution);
 
         cloned_call_base->replaceAllUsesWith(substituted_call);
         cloned_call_base->eraseFromParent();
@@ -310,7 +314,7 @@ Result<ValueId, InlineError> BitcodeExplorer::InlineFunctionCall(ValueId instruc
     MAG_DEBUG(VerifyModule(func_module));
 
     // elide the hooks
-    ElideSubstitutionHooks(*cloned_caller_function, substitute_value_func);
+    ElideSubstitutionHooks(*cloned_caller_function, substitution_observer);
 
     // update all metadata
     UpdateMetadata(*cloned_caller_function);
@@ -358,7 +362,7 @@ void BitcodeExplorer::UpdateMetadata(llvm::Function &function) {
     }
 }
 
-void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, const std::function<llvm::Value *(llvm::Use *, llvm::Value *)> &substitute_value_func) {
+void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitutionObserver &substitution_observer) {
     // find all uses of the hook functions
     std::vector<std::pair<llvm::Use *, llvm::Value *>> subs;
     for (auto [type, function_callee_obj] : hook_functions) {
@@ -373,7 +377,10 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, const std
     for (auto [use, sub_val] : subs) {
         llvm::User *user = use->getUser();
         if (auto *inst = dyn_cast<llvm::Instruction>(user)) {
-            inst->replaceAllUsesWith(substitute_value_func(use, sub_val));
+            ValueId substitution_id = GetId(*inst, ValueIdKind::kSubstitution);
+            assert(substitution_id != kInvalidValueId);
+
+            inst->replaceAllUsesWith(substitution_observer.PerformSubstitution(use, sub_val, static_cast<SubstitutionKind>(substitution_id)));
             inst->eraseFromParent();
         }
     }
@@ -392,35 +399,32 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, const std
 
 // Convert from opaque type `ValueIdKind` to actual llvm `kind_id`.
 unsigned BitcodeExplorer::ValueIdKindToKindId(ValueIdKind kind) const {
-    unsigned kind_id;
     switch (kind) {
         case ValueIdKind::kOriginal:
-            kind_id = md_explorer_source_id;
-            break;
+            return md_explorer_source_id;
         case ValueIdKind::kDerived:
-            kind_id = md_explorer_id;
-            break;
+            return md_explorer_id;
         case ValueIdKind::kBlock:
-            kind_id = md_explorer_block_id;
-            break;
+            return md_explorer_block_id;
+        case ValueIdKind::kSubstitution:
+            return md_explorer_substitution_kind_id;
     }
-    return kind_id;
+    assert(false);
+    return 0;  // An invalid metadata id.
 }
 
 // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
 ValueId BitcodeExplorer::GetId(const llvm::Function &function, ValueIdKind kind) const {
     llvm::MDNode* mdnode = function.getMetadata(ValueIdKindToKindId(kind));
     if (mdnode == nullptr) { return kInvalidValueId; }
-    ValueId id = cast<llvm::ConstantInt>(cast<llvm::ConstantAsMetadata>(mdnode->getOperand(0))->getValue())->getZExtValue();
-    return id;
+    return cast<llvm::ConstantInt>(cast<llvm::ConstantAsMetadata>(mdnode->getOperand(0))->getValue())->getZExtValue();
 }
 
 // Returns the value ID for `instruction`, or `kInvalidValueId` if no ID is found.
 ValueId BitcodeExplorer::GetId(const llvm::Instruction &instruction, ValueIdKind kind) const {
     llvm::MDNode* mdnode = instruction.getMetadata(ValueIdKindToKindId(kind));
     if (mdnode == nullptr) { return kInvalidValueId; }
-    ValueId id = cast<llvm::ConstantInt>(cast<llvm::ConstantAsMetadata>(mdnode->getOperand(0))->getValue())->getZExtValue();
-    return id;
+    return cast<llvm::ConstantInt>(cast<llvm::ConstantAsMetadata>(mdnode->getOperand(0))->getValue())->getZExtValue();
 }
 
 // Set an id inside the metadata of a function.
@@ -454,15 +458,15 @@ void BitcodeExplorer::RemoveId(llvm::Instruction &instruction, ValueIdKind kind)
 // Get a `FunctionCallee` object for the given `type`. Create the function in `func_module` if it doesn't exist.
 // In addition, the object is added to the `hook_functions` map.
 llvm::FunctionCallee BitcodeExplorer::GetHookFunction(llvm::Type *type, llvm::Module *func_module) {
-    if (hook_functions.find(type) != hook_functions.end()) {
+    llvm::FunctionCallee &hook_func = hook_functions[type];
+    if (hook_func) {
         return hook_functions[type];
     }
 
     llvm::FunctionType *func_type = llvm::FunctionType::get(
             type, {type},
             false);
-    llvm::FunctionCallee hook_func = func_module->getOrInsertFunction(GetSubstituteHookName(type), func_type);
-    hook_functions.emplace(type, hook_func);
+    hook_func = func_module->getOrInsertFunction(GetSubstituteHookName(type), func_type);
     return hook_func;
 }
 

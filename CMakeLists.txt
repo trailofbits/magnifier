@@ -24,6 +24,7 @@ set(magnifier_PUBLIC_HEADERS
         "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
         "${magnifier_PUBLIC_HEADER_DIR}/Result.h"
         "${magnifier_PUBLIC_HEADER_DIR}/IFunctionResolver.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/ISubstitionObserver.h"
         )
 set_target_properties(magnifier
         PROPERTIES
