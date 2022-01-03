@@ -27,6 +27,15 @@ void IdCommentWriter::emitInstructionAnnot(const llvm::Instruction *instruction,
 void IdCommentWriter::emitFunctionAnnot(const llvm::Function *function, llvm::formatted_raw_ostream &os) {
     ValueId function_id = explorer.GetId(*function, ValueIdKind::kDerived);
     ValueId source_id = explorer.GetId(*function, ValueIdKind::kOriginal);
+
+    if (!function->arg_empty()) {
+        os << "Function argument ids: ";
+        for (const llvm::Argument &argument : function->args()) {
+            os << "(%" << argument.getName().str() << " = " << (function_id+argument.getArgNo()+1) << ") ";
+        }
+        os << "\n";
+    }
+
     os << function_id << "|" << source_id;
 }
 

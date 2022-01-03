@@ -49,15 +49,17 @@ private:
 public:
     explicit SubstitutionObserver(llvm::ToolOutputFile &tool_output): tool_output(tool_output) {};
 
-    llvm::Value * PerformSubstitution(llvm::Use *use, llvm::Value *value, magnifier::SubstitutionKind kind) override {
+    llvm::Value *PerformSubstitution(llvm::Use *use, llvm::Value *old_val, llvm::Value *new_val, magnifier::SubstitutionKind kind) override {
         static const std::map<magnifier::SubstitutionKind, std::string> substitution_kind_map = {
                 {magnifier::SubstitutionKind::kReturnValue, "Return value"},
                 {magnifier::SubstitutionKind::kArgument, "Argument"},
+                {magnifier::SubstitutionKind::kConstantFolding, "Constant folding"},
+                {magnifier::SubstitutionKind::kValueSubstitution, "Value substitution"},
         };
-        tool_output.os() << "user: ";
+        tool_output.os() << "perform substitution: ";
         use->getUser()->print(tool_output.os());
         tool_output.os() << " : " << substitution_kind_map.at(kind) << "\n";
-        return value;
+        return new_val;
     }
 };
 
@@ -153,6 +155,43 @@ int main(int argc, char **argv) {
                     explorer.PrintFunction(result.Value(), tool_output.os());
                 } else {
                     tool_output.os() << "Inline function call failed for id: " << instruction_id << " (error: " << inline_error_map.at(result.Error()) << ")\n";
+                }
+            }},
+            // Substitute with value: `sv <id> <val>`
+            {"sv", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                static const std::map<magnifier::SubstitutionError, std::string> substitution_error_map = {
+                        {magnifier::SubstitutionError::kIdNotFound,    "Instruction not found"},
+                        {magnifier::SubstitutionError::kIncorrectType, "Instruction has non-integer type"},
+                };
+
+                if (args.size() != 3) {
+                    std::cout << "Usage: sv <id> <val> - Substitute with value" << std::endl;
+                    return;
+                }
+
+                magnifier::ValueId value_id = std::stoul(args[1], nullptr, 10);
+                uint64_t value = std::stoul(args[2], nullptr, 10);
+
+                // Try treating `value_id` as an instruction id
+                magnifier::Result<magnifier::ValueId, magnifier::SubstitutionError> result = explorer.SubstituteInstructionWithValue(value_id, value, substitution_observer);
+
+                if (result.Succeeded()) {
+                    explorer.PrintFunction(result.Value(), tool_output.os());
+                    return;
+                }
+
+                if (result.Error() != magnifier::SubstitutionError::kIdNotFound) {
+                    tool_output.os() << "Substitute value failed for id:  " << value_id << " (error: " << substitution_error_map.at(result.Error()) << ")\n";
+                    return;
+                }
+
+                // Try treating `value_id` as an argument id
+                result = explorer.SubstituteArgumentWithValue(value_id, value, substitution_observer);
+
+                if (result.Succeeded()) {
+                    explorer.PrintFunction(result.Value(), tool_output.os());
+                } else {
+                    tool_output.os() << "Substitute value failed for id:  " << value_id << " (error: " << substitution_error_map.at(result.Error()) << ")\n";
                 }
             }},
     };
