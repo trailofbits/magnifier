@@ -424,22 +424,25 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitu
             builder.CreateAssumption(builder.CreateCmp(llvm::CmpInst::ICMP_EQ, old_val, updated_sub_val));
         }
 
-        // Iterate through and replace each occurrence of the value.
-        // Attempt constant folding and add additional substitution hooks to the `subs` list.
-        while (!inst->use_empty()) {
-            llvm::Use &substitute_location = *inst->use_begin();
-            substitute_location.set(updated_sub_val);
+        // Check we are not replacing the value with itself
+        if (updated_sub_val != inst) {
+            // Iterate through and replace each occurrence of the value.
+            // Attempt constant folding and add additional substitution hooks to the `subs` list.
+            while (!inst->use_empty()) {
+                llvm::Use &substitute_location = *inst->use_begin();
+                substitute_location.set(updated_sub_val);
 
-            auto *target_instr = cast<llvm::Instruction>(substitute_location.getUser());
-            llvm::Constant *fold_result = llvm::ConstantFoldInstruction(target_instr, module_data_layout);
-            if (fold_result) {
-                SetId(*target_instr,static_cast<std::underlying_type_t<SubstitutionKind>>(SubstitutionKind::kConstantFolding),ValueIdKind::kSubstitution);
-                subs.emplace_back(target_instr, target_instr, fold_result);
+                auto *target_instr = cast<llvm::Instruction>(substitute_location.getUser());
+                llvm::Constant *fold_result = llvm::ConstantFoldInstruction(target_instr, module_data_layout);
+                if (fold_result) {
+                    SetId(*target_instr,static_cast<std::underlying_type_t<SubstitutionKind>>(SubstitutionKind::kConstantFolding),ValueIdKind::kSubstitution);
+                    subs.emplace_back(target_instr, target_instr, fold_result);
+                }
             }
-        }
 
-        // Remove the substitution hook
-        inst->eraseFromParent();
+            // Remove the substitution hook
+            inst->eraseFromParent();
+        }
 
         // Remove `old_val` if it's an instruction and no longer in use.
         // Have to make sure it's not the same as `inst`.
