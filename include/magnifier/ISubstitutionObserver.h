@@ -10,7 +10,7 @@
 
 namespace llvm {
 class Value;
-class Use;
+class Instruction;
 }
 
 namespace magnifier {
@@ -24,7 +24,7 @@ enum class SubstitutionKind {
 
 class ISubstitutionObserver {
 public:
-    virtual llvm::Value *PerformSubstitution(llvm::Use *use, llvm::Value *old_val, llvm::Value *new_val, SubstitutionKind kind) = 0;
+    virtual llvm::Value *PerformSubstitution(llvm::Instruction *instr, llvm::Value *old_val, llvm::Value *new_val, SubstitutionKind kind) = 0;
 };
 
 }

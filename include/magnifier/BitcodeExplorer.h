@@ -84,8 +84,9 @@ private:
     // but for uniquely identifying `BasicBlock` values.
     const unsigned md_explorer_block_id;
     // ID of the `!explorer.substitution_kind_id` metadata. This metadata should only be
-    // attached to call instructions to the substitution hook function. It helps determine
-    // the `SubstitutionKind` of that call.
+    // attached to instructions that are going to be substituted by `ElideSubstitutionHooks`.
+    // It helps determine the `SubstitutionKind` of that instruction. It's most commonly applied
+    // to `CallInst` values calling the substitute hook function.
     const unsigned md_explorer_substitution_kind_id;
     // Annotator object used for annotating function disassembly. It prints the various metadata
     // attached to each value.
@@ -144,10 +145,10 @@ public:
     Result<ValueId, InlineError> InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, ISubstitutionObserver &substitution_observer);
 
     // Substitute an instruction with integer value
-    Result <ValueId, SubstitutionError> SubstituteInstructionWithValue(ValueId instruction_id, uint64_t value, ISubstitutionObserver &observer);
+    Result<ValueId, SubstitutionError> SubstituteInstructionWithValue(ValueId instruction_id, uint64_t value, ISubstitutionObserver &observer);
 
     // Substitute an argument with integer value
-    Result <ValueId, SubstitutionError> SubstituteArgumentWithValue(ValueId argument_id, uint64_t value, ISubstitutionObserver &observer);
+    Result<ValueId, SubstitutionError> SubstituteArgumentWithValue(ValueId argument_id, uint64_t value, ISubstitutionObserver &observer);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;

@@ -49,7 +49,7 @@ private:
 public:
     explicit SubstitutionObserver(llvm::ToolOutputFile &tool_output): tool_output(tool_output) {};
 
-    llvm::Value *PerformSubstitution(llvm::Use *use, llvm::Value *old_val, llvm::Value *new_val, magnifier::SubstitutionKind kind) override {
+    llvm::Value *PerformSubstitution(llvm::Instruction *instr, llvm::Value *old_val, llvm::Value *new_val, magnifier::SubstitutionKind kind) override {
         static const std::map<magnifier::SubstitutionKind, std::string> substitution_kind_map = {
                 {magnifier::SubstitutionKind::kReturnValue, "Return value"},
                 {magnifier::SubstitutionKind::kArgument, "Argument"},
@@ -57,7 +57,7 @@ public:
                 {magnifier::SubstitutionKind::kValueSubstitution, "Value substitution"},
         };
         tool_output.os() << "perform substitution: ";
-        use->getUser()->print(tool_output.os());
+        instr->print(tool_output.os());
         tool_output.os() << " : " << substitution_kind_map.at(kind) << "\n";
         return new_val;
     }

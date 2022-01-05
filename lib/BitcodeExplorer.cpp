@@ -345,7 +345,7 @@ void BitcodeExplorer::UpdateMetadata(llvm::Function &function) {
     for (llvm::Argument &argument : function.args()) {
         ValueId argument_id = value_id_counter++;
         argument_map.emplace(argument_id, &argument);
-        assert(argument_id == function_id + argument.getArgNo() + 1);
+        assert(argument_id == (function_id + argument.getArgNo() + 1));
     }
 
 
@@ -378,74 +378,83 @@ void BitcodeExplorer::UpdateMetadata(llvm::Function &function) {
 }
 
 void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitutionObserver &substitution_observer) {
-    // find all uses of the hook functions
-    std::vector<std::tuple<llvm::Use *, llvm::Value *, llvm::Value *>> subs;
+    // Get a const reference to the module data layout later used for constant folding
+    llvm::Module *func_module = function.getParent();
+    const llvm::DataLayout &module_data_layout = func_module->getDataLayout();
+
+    // The tuple contains:
+    // 1. The instruction we are substituting
+    //   This is usually in the form of `%abc = call i32 @substitute_hook_4949385960(i32 %old_val, i32 %new_val)`.
+    //   But in the case of constant folding, it can also be an instruction with only constant operands similar
+    //   to `%add.i = add nsw i32 31, 30`.
+    // 2. The old value before the substitution
+    // 3. The new value after the substitution
+    std::vector<std::tuple<llvm::Instruction *, llvm::Value *, llvm::Value *>> subs;
+
+    // Find all uses of the hook functions
     for (auto [type, function_callee_obj] : hook_functions) {
         if (auto *hook_func = dyn_cast<llvm::Function>(function_callee_obj.getCallee())) {
             for (llvm::Use &use : hook_func->uses()) {
-                subs.emplace_back(&use, use.getUser()->getOperand(0), use.getUser()->getOperand(1));
+                llvm::User *user = use.getUser();
+                if (!llvm::isa<llvm::CallBase>(user)) { continue; }
+
+                // only enqueue hook calls inside the given function
+                auto *call_base = cast<llvm::CallBase>(user);
+                if (call_base->getFunction() == &function) {
+                    subs.emplace_back(call_base, user->getOperand(0), user->getOperand(1));
+                }
             }
         }
     }
 
     // substitute the values
     while (!subs.empty()) {
-        auto [use, old_val, new_val] = subs.back();
+        auto [inst, old_val, new_val] = subs.back();
         subs.pop_back();
 
-        llvm::User *user = use->getUser();
-        if (auto *inst = dyn_cast<llvm::Instruction>(user)) {
-            ValueId substitution_id = GetId(*inst, ValueIdKind::kSubstitution);
-            assert(substitution_id != kInvalidValueId);
+        ValueId substitution_id = GetId(*inst, ValueIdKind::kSubstitution);
+        assert(substitution_id != kInvalidValueId);
 
-            auto substitution_kind = static_cast<SubstitutionKind>(substitution_id);
-            llvm::Value *updated_sub_val = substitution_observer.PerformSubstitution(use, old_val, new_val, substitution_kind);
+        auto substitution_kind = static_cast<SubstitutionKind>(substitution_id);
+        llvm::Value *updated_sub_val = substitution_observer.PerformSubstitution(inst, old_val, new_val,substitution_kind);
 
-            // Assume equivalence for value substitution
-            if (substitution_kind == SubstitutionKind::kValueSubstitution && updated_sub_val != old_val) {
-                llvm::IRBuilder builder(inst);
-                builder.CreateAssumption(builder.CreateCmp(llvm::CmpInst::ICMP_EQ, old_val, updated_sub_val));
+        // Assume equivalence for value substitution
+        if (substitution_kind == SubstitutionKind::kValueSubstitution && updated_sub_val != old_val) {
+            llvm::IRBuilder builder(inst);
+            builder.CreateAssumption(builder.CreateCmp(llvm::CmpInst::ICMP_EQ, old_val, updated_sub_val));
+        }
+
+        // Iterate through and replace each occurrence of the value.
+        // Attempt constant folding and add additional substitution hooks to the `subs` list.
+        while (!inst->use_empty()) {
+            llvm::Use &substitute_location = *inst->use_begin();
+            substitute_location.set(updated_sub_val);
+
+            auto *target_instr = cast<llvm::Instruction>(substitute_location.getUser());
+            llvm::Constant *fold_result = llvm::ConstantFoldInstruction(target_instr, module_data_layout);
+            if (fold_result) {
+                SetId(*target_instr,static_cast<std::underlying_type_t<SubstitutionKind>>(SubstitutionKind::kConstantFolding),ValueIdKind::kSubstitution);
+                subs.emplace_back(target_instr, target_instr, fold_result);
             }
+        }
 
-            // Iterate through and replace each occurrence of the value.
-            // Attempt constant folding and add additional substitution hooks to the `subs` list.
-            while (!inst->use_empty()) {
-                llvm::Use &substitute_location = *inst->use_begin();
-                substitute_location.set(updated_sub_val);
+        // Remove the substitution hook
+        inst->eraseFromParent();
 
-                auto *target_instr = cast<llvm::Instruction>(substitute_location.getUser());
-                llvm::Module *module = inst->getFunction()->getParent();
-                llvm::Constant *fold_result = llvm::ConstantFoldInstruction(target_instr, module->getDataLayout());
-                if (fold_result) {
-                    llvm::CallInst *call_inst = CreateHookCallInst(fold_result->getType(), module, SubstitutionKind::kConstantFolding, target_instr, fold_result);
-                    call_inst->insertAfter(target_instr);
-
-                    subs.emplace_back(&call_inst->getCalledOperandUse(), target_instr, fold_result);
-                    target_instr->replaceUsesWithIf(call_inst, [call_inst](const llvm::Use &use) -> bool {
-                        return use.getUser() != call_inst;
-                    });
-
-                    MAG_DEBUG(VerifyModule(module, inst->getFunction()));
-                }
-            }
-
-
-            // Remove the substitution hook
-            inst->eraseFromParent();
-
-            // Remove `old_val` if it's an instruction and no longer in use. This is mostly applies to constant fold substitution.
+        // Remove `old_val` if it's an instruction and no longer in use.
+        // Have to make sure it's not the same as `inst`.
+        if (old_val != inst) {
             auto old_instr = dyn_cast<llvm::Instruction>(old_val);
-            if (old_instr && old_instr->uses().empty()) {
+            if (old_instr && old_instr->getParent() && old_instr->use_empty()) {
                 old_instr->eraseFromParent();
             }
-
         }
     }
 
     // remove all the hook functions after eliding them
     for (auto [type, function_callee_obj] : hook_functions) {
         if (auto *hook_func = dyn_cast<llvm::Function>(function_callee_obj.getCallee())) {
-            assert(hook_func->uses().empty());
+            assert(hook_func->use_empty());
             hook_func->eraseFromParent();
         }
     }
