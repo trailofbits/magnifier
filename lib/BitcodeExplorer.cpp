@@ -393,16 +393,16 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitu
 
     // Find all uses of the hook functions
     for (auto [type, function_callee_obj] : hook_functions) {
-        if (auto *hook_func = dyn_cast<llvm::Function>(function_callee_obj.getCallee())) {
-            for (llvm::Use &use : hook_func->uses()) {
-                llvm::User *user = use.getUser();
-                if (!llvm::isa<llvm::CallBase>(user)) { continue; }
+        auto *hook_func = dyn_cast<llvm::Function>(function_callee_obj.getCallee());
+        if (!hook_func) {
+            continue;
+        }
 
-                // only enqueue hook calls inside the given function
-                auto *call_base = cast<llvm::CallBase>(user);
-                if (call_base->getFunction() == &function) {
-                    subs.emplace_back(call_base, user->getOperand(0), user->getOperand(1));
-                }
+        for (llvm::Use &use: hook_func->uses()) {
+            // only enqueue hook calls inside the given function
+            auto *call_base = dyn_cast<llvm::CallBase>(use.getUser());
+            if (call_base && call_base->getFunction() == &function) {
+                subs.emplace_back(call_base, call_base->getArgOperand(0), call_base->getArgOperand(1));
             }
         }
     }
@@ -620,6 +620,9 @@ Result <ValueId, SubstitutionError> BitcodeExplorer::SubstituteInstructionWithVa
 Result<ValueId, SubstitutionError> BitcodeExplorer::SubstituteArgumentWithValue(ValueId argument_id, uint64_t value, ISubstitutionObserver &observer) {
     auto argument_pair = argument_map.find(argument_id);
     if (argument_pair == argument_map.end()) {
+        if (function_map.find(argument_id) != function_map.end()) {
+            return SubstitutionError::kCannotUseFunctionId;
+        }
         return SubstitutionError::kIdNotFound;
     }
 

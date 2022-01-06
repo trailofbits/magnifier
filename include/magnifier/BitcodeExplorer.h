@@ -63,6 +63,7 @@ enum class InlineError {
 enum class SubstitutionError {
     kIdNotFound, // ValueId not found
     kIncorrectType, // Instruction is not of the desired type
+    kCannotUseFunctionId, // Expecting an instruction id instead of a function id
 };
 
 class BitcodeExplorer {

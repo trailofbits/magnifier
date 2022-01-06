@@ -162,6 +162,7 @@ int main(int argc, char **argv) {
                 static const std::map<magnifier::SubstitutionError, std::string> substitution_error_map = {
                         {magnifier::SubstitutionError::kIdNotFound,    "Instruction not found"},
                         {magnifier::SubstitutionError::kIncorrectType, "Instruction has non-integer type"},
+                        {magnifier::SubstitutionError::kCannotUseFunctionId, "Expecting an instruction id instead of a function id"},
                 };
 
                 if (args.size() != 3) {
