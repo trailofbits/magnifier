@@ -10,6 +10,7 @@
 #pragma once
 
 #include <magnifier/Result.h>
+#include <magnifier/ISubstitutionObserver.h>
 
 #include <string>
 #include <vector>
@@ -29,12 +30,12 @@ class Use;
 class FunctionCallee;
 class Type;
 class BasicBlock;
+class CallInst;
 }  // namespace llvm
 
 namespace magnifier {
 class IdCommentWriter;
 class IFunctionResolver;
-class ISubstitutionObserver;
 
 using ValueId = uint64_t;
 static constexpr ValueId kInvalidValueId = 0;
@@ -59,6 +60,12 @@ enum class InlineError {
     kResolveFunctionTypeMismatch, // Resolve function type mismatch
 };
 
+enum class SubstitutionError {
+    kIdNotFound, // ValueId not found
+    kIncorrectType, // Instruction is not of the desired type
+    kCannotUseFunctionId, // Expecting an instruction id instead of a function id
+};
+
 class BitcodeExplorer {
 
 private:
@@ -78,8 +85,9 @@ private:
     // but for uniquely identifying `BasicBlock` values.
     const unsigned md_explorer_block_id;
     // ID of the `!explorer.substitution_kind_id` metadata. This metadata should only be
-    // attached to call instructions to the substitution hook function. It helps determine
-    // the `SubstitutionKind` of that call.
+    // attached to instructions that are going to be substituted by `ElideSubstitutionHooks`.
+    // It helps determine the `SubstitutionKind` of that instruction. It's most commonly applied
+    // to `CallInst` values calling the substitute hook function.
     const unsigned md_explorer_substitution_kind_id;
     // Annotator object used for annotating function disassembly. It prints the various metadata
     // attached to each value.
@@ -92,6 +100,8 @@ private:
     std::map<ValueId, llvm::WeakVH> instruction_map;
     // A map between unique `ValueId`s and their corresponding basic blocks.
     std::map<ValueId, llvm::WeakVH> block_map;
+    // A map between unique `ValueId`s and their corresponding function arguments.
+    std::map<ValueId, llvm::WeakVH> argument_map;
     // An increment only counter used for assigning unique ids to values.
     ValueId value_id_counter;
     // A temporary map between types and their corresponding substitute hook functions.
@@ -113,6 +123,10 @@ private:
     // In addition, the object is added to the `hook_functions` map.
     llvm::FunctionCallee GetHookFunction(llvm::Type *type, llvm::Module *func_module);
 
+    // Create and return a `CallInst` for calling the substitution hook.
+    // It also attaches the correct `SubstitutionKind` metadata to the instruction.
+    llvm::CallInst *CreateHookCallInst(llvm::Type *type, llvm::Module *func_module, SubstitutionKind hook_kind, llvm::Value *old_val, llvm::Value *new_val);
+
 public:
     explicit BitcodeExplorer(llvm::LLVMContext &llvm_context);
 
@@ -130,6 +144,12 @@ public:
 
     // Inline a call instruction
     Result<ValueId, InlineError> InlineFunctionCall(ValueId instruction_id, IFunctionResolver &resolver, ISubstitutionObserver &substitution_observer);
+
+    // Substitute an instruction with integer value
+    Result<ValueId, SubstitutionError> SubstituteInstructionWithValue(ValueId instruction_id, uint64_t value, ISubstitutionObserver &observer);
+
+    // Substitute an argument with integer value
+    Result<ValueId, SubstitutionError> SubstituteArgumentWithValue(ValueId argument_id, uint64_t value, ISubstitutionObserver &observer);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;

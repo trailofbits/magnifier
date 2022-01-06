@@ -35,10 +35,10 @@ public:
     const ValueType *operator->(void) const;
 
     Result(const ValueType &value);
-    Result(ValueType &&value);
+    Result(ValueType &&value): destroyed(false), data(std::move(value)) {}
 
     Result(const ErrorType &error);
-    Result(ErrorType &&error);
+    Result(ErrorType &&error):  destroyed(false), data(std::move(error)) {}
 
     Result(Result &&other) noexcept;
     Result &operator=(Result &&other) noexcept;
@@ -120,21 +120,10 @@ Result<ValueType, ErrorType>::Result(const ValueType &value) {
     destroyed = false;
 }
 
-template <typename ValueType, typename ErrorType>
-Result<ValueType, ErrorType>::Result(ValueType &&value) {
-    data = std::move(value);
-    destroyed = false;
-}
 
 template <typename ValueType, typename ErrorType>
 Result<ValueType, ErrorType>::Result(const ErrorType &error) {
     data = error;
-    destroyed = false;
-}
-
-template <typename ValueType, typename ErrorType>
-Result<ValueType, ErrorType>::Result(ErrorType &&error) {
-    data = std::move(error);
     destroyed = false;
 }
 

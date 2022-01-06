@@ -10,7 +10,7 @@
 
 namespace llvm {
 class Value;
-class Use;
+class Instruction;
 }
 
 namespace magnifier {
@@ -18,11 +18,13 @@ namespace magnifier {
 enum class SubstitutionKind {
     kReturnValue = 1,
     kArgument,
+    kConstantFolding,
+    kValueSubstitution,
 };
 
 class ISubstitutionObserver {
 public:
-    virtual llvm::Value *PerformSubstitution(llvm::Use *use, llvm::Value *value, SubstitutionKind kind) = 0;
+    virtual llvm::Value *PerformSubstitution(llvm::Instruction *instr, llvm::Value *old_val, llvm::Value *new_val, SubstitutionKind kind) = 0;
 };
 
 }
