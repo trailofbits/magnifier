@@ -20,11 +20,13 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Analysis/ConstantFolding.h>
+#include <llvm/Passes/PassBuilder.h>
 
 #include <iostream>
 
@@ -677,6 +679,55 @@ Result<ValueId, SubstitutionError> BitcodeExplorer::SubstituteArgumentWithValue(
     MAG_DEBUG(VerifyModule(func_module, cloned_function));
 
     ElideSubstitutionHooks(*cloned_function, observer);
+
+    UpdateMetadata(*cloned_function);
+
+    MAG_DEBUG(VerifyModule(func_module, cloned_function));
+
+    return GetId(*cloned_function, ValueIdKind::kDerived);
+}
+
+Result<ValueId, OptimizationError> BitcodeExplorer::OptimizeFunction(ValueId function_id, const llvm::PassBuilder::OptimizationLevel &optimization_level) {
+    if (optimization_level == llvm::PassBuilder::OptimizationLevel::O0) {
+        return OptimizationError::kInvalidOptimizationLevel;
+    }
+
+    auto function_pair = function_map.find(function_id);
+    if (function_pair == function_map.end()) {
+        return OptimizationError::kIdNotFound;
+    }
+
+    llvm::Function *function = cast_or_null<llvm::Function>(function_pair->second);
+    if (!function) {
+        return OptimizationError::kIdNotFound;
+    }
+
+    llvm::Module *func_module = function->getParent();
+
+    // Clone the function
+    llvm::ValueToValueMapTy value_map;
+    llvm::Function *cloned_function = llvm::CloneFunction(function, value_map);
+
+    // Create the analysis managers
+    llvm::LoopAnalysisManager loop_analysis_manager;
+    llvm::FunctionAnalysisManager function_analysis_manager;
+    llvm::CGSCCAnalysisManager cgscc_analysis_manager;
+    llvm::ModuleAnalysisManager module_analysis_manager;
+
+    // Create the new pass manager builder
+    llvm::PassBuilder pass_builder;
+
+    function_analysis_manager.registerPass([&] { return pass_builder.buildDefaultAAPipeline(); });
+
+    pass_builder.registerModuleAnalyses(module_analysis_manager);
+    pass_builder.registerCGSCCAnalyses(cgscc_analysis_manager);
+    pass_builder.registerFunctionAnalyses(function_analysis_manager);
+    pass_builder.registerLoopAnalyses(loop_analysis_manager);
+    pass_builder.crossRegisterProxies(loop_analysis_manager, function_analysis_manager, cgscc_analysis_manager, module_analysis_manager);
+
+    llvm::FunctionPassManager function_pass_manager = pass_builder.buildFunctionSimplificationPipeline(optimization_level, llvm::PassBuilder::ThinLTOPhase::None);
+
+    function_pass_manager.run(*cloned_function, function_analysis_manager);
 
     UpdateMetadata(*cloned_function);
 

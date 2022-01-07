@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <llvm/Passes/PassBuilder.h>
 
 namespace llvm {
 class AssemblyAnnotationWriter;
@@ -64,6 +65,11 @@ enum class SubstitutionError {
     kIdNotFound, // ValueId not found
     kIncorrectType, // Instruction is not of the desired type
     kCannotUseFunctionId, // Expecting an instruction id instead of a function id
+};
+
+enum class OptimizationError {
+    kInvalidOptimizationLevel, // The provided optimization level is not allowed
+    kIdNotFound, // Function id not found
 };
 
 class BitcodeExplorer {
@@ -150,6 +156,9 @@ public:
 
     // Substitute an argument with integer value
     Result<ValueId, SubstitutionError> SubstituteArgumentWithValue(ValueId argument_id, uint64_t value, ISubstitutionObserver &observer);
+
+    // Optimize a function using a certain `optimization_level`
+    Result<ValueId, OptimizationError> OptimizeFunction(ValueId function_id, const llvm::PassBuilder::OptimizationLevel &optimization_level);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;
