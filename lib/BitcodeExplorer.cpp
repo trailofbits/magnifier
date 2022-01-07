@@ -736,5 +736,55 @@ Result<ValueId, OptimizationError> BitcodeExplorer::OptimizeFunction(ValueId fun
     return GetId(*cloned_function, ValueIdKind::kDerived);
 }
 
+std::optional<DeletionError> BitcodeExplorer::DeleteFunction(ValueId function_id) {
+    auto function_pair = function_map.find(function_id);
+    if (function_pair == function_map.end()) {
+        return DeletionError::kIdNotFound;
+    }
+
+    llvm::Function *function = cast_or_null<llvm::Function>(function_pair->second);
+    if (!function) {
+        return DeletionError::kIdNotFound;
+    }
+
+    // Check if the function is referenced by another function
+    bool function_used_by_other_function = false;
+    for (llvm::Use &use : function->uses()) {
+       auto *instr = dyn_cast<llvm::Instruction>(use.getUser());
+       if (instr && instr->getFunction() != function) {
+           function_used_by_other_function = true;
+           break;
+       }
+    }
+
+    if (function_used_by_other_function) {
+        return DeletionError::kFunctionInUse;
+    }
+
+    // Remove function from the various maps
+    function_map.erase(function_id);
+
+    for (llvm::Argument &argument : function->args()) {
+        argument_map.erase(function_id+argument.getArgNo()+1);
+    }
+
+    for (auto &instruction : llvm::instructions(function)) {
+        instruction_map.erase(GetId(instruction, ValueIdKind::kDerived));
+    }
+
+    for (llvm::BasicBlock &block : *function) {
+        llvm::Instruction *terminator_instr = block.getTerminator();
+        if (!terminator_instr) {
+            continue;
+        }
+        block_map.erase(GetId(*terminator_instr, ValueIdKind::kBlock));
+    }
+
+    // Delete the function
+    function->eraseFromParent();
+
+    return std::nullopt;
+}
+
 BitcodeExplorer::~BitcodeExplorer() = default;
 }

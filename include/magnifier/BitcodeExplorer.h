@@ -72,6 +72,11 @@ enum class OptimizationError {
     kIdNotFound, // Function id not found
 };
 
+enum class DeletionError {
+    kIdNotFound, // Function id not found
+    kFunctionInUse, // Function is still in use
+};
+
 class BitcodeExplorer {
 
 private:
@@ -159,6 +164,9 @@ public:
 
     // Optimize a function using a certain `optimization_level`
     Result<ValueId, OptimizationError> OptimizeFunction(ValueId function_id, const llvm::PassBuilder::OptimizationLevel &optimization_level);
+
+    // Delete a function that is not in use
+    std::optional<DeletionError> DeleteFunction(ValueId function_id);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;

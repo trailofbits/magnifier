@@ -146,6 +146,26 @@ int main(int argc, char **argv) {
                     tool_output.os() << "Function not found: " << function_id << "\n";
                 }
             }},
+            // Delete function: `df! <function_id>`
+            {"df!", [&explorer, &tool_output](const std::vector<std::string> &args) -> void {
+                static const std::map<magnifier::DeletionError, std::string> deletion_error_map = {
+                        {magnifier::DeletionError::kIdNotFound, "Function id not found"},
+                        {magnifier::DeletionError::kFunctionInUse, "Function is still in use"},
+                };
+
+                if (args.size() != 2) {
+                    tool_output.os() << "Usage: df! <function_id> - Delete function\n";
+                    return;
+                }
+
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
+                std::optional<magnifier::DeletionError> result = explorer.DeleteFunction(function_id);
+                if (!result) {
+                    tool_output.os() << "Deleted function with id: " << function_id << "\n";
+                } else {
+                    tool_output.os() << "Delete function failed for id: " << function_id << " (error: " << deletion_error_map.at(result.value()) << ")\n";
+                }
+            }},
             // Inline function call: `ic <instruction_id>`
             {"ic", [&explorer, &tool_output, &resolver, &substitution_observer](const std::vector<std::string> &args) -> void {
                 static const std::map<magnifier::InlineError, std::string> inline_error_map = {
