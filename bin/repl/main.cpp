@@ -63,6 +63,20 @@ public:
     }
 };
 
+void RunOptimization(magnifier::BitcodeExplorer &explorer, llvm::ToolOutputFile &tool_output, magnifier::ValueId function_id, llvm::PassBuilder::OptimizationLevel level) {
+    static const std::map<magnifier::OptimizationError, std::string> optimization_error_map = {
+            {magnifier::OptimizationError::kInvalidOptimizationLevel, "The provided optimization level is not allowed"},
+            {magnifier::OptimizationError::kIdNotFound, "Function id not found"},
+    };
+
+    magnifier::Result<magnifier::ValueId, magnifier::OptimizationError> result = explorer.OptimizeFunction(function_id, level);
+    if (result.Succeeded()) {
+        explorer.PrintFunction(result.Value(), tool_output.os());
+    } else {
+        tool_output.os() << "Optimize function failed for id: " << function_id << " (error: " << optimization_error_map.at(result.Error()) << ")\n";
+    }
+}
+
 int main(int argc, char **argv) {
     llvm::InitLLVM x(argc, argv);
     llvm::LLVMContext llvm_context;
@@ -132,6 +146,26 @@ int main(int argc, char **argv) {
                     tool_output.os() << "Function not found: " << function_id << "\n";
                 }
             }},
+            // Delete function: `df! <function_id>`
+            {"df!", [&explorer, &tool_output](const std::vector<std::string> &args) -> void {
+                static const std::map<magnifier::DeletionError, std::string> deletion_error_map = {
+                        {magnifier::DeletionError::kIdNotFound, "Function id not found"},
+                        {magnifier::DeletionError::kFunctionInUse, "Function is still in use"},
+                };
+
+                if (args.size() != 2) {
+                    tool_output.os() << "Usage: df! <function_id> - Delete function\n";
+                    return;
+                }
+
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
+                std::optional<magnifier::DeletionError> result = explorer.DeleteFunction(function_id);
+                if (!result) {
+                    tool_output.os() << "Deleted function with id: " << function_id << "\n";
+                } else {
+                    tool_output.os() << "Delete function failed for id: " << function_id << " (error: " << deletion_error_map.at(result.value()) << ")\n";
+                }
+            }},
             // Inline function call: `ic <instruction_id>`
             {"ic", [&explorer, &tool_output, &resolver, &substitution_observer](const std::vector<std::string> &args) -> void {
                 static const std::map<magnifier::InlineError, std::string> inline_error_map = {
@@ -194,6 +228,36 @@ int main(int argc, char **argv) {
                 } else {
                     tool_output.os() << "Substitute value failed for id:  " << value_id << " (error: " << substitution_error_map.at(result.Error()) << ")\n";
                 }
+            }},
+            // Optimize function bitcode using optimization level -O1: `o1 <id>`
+            {"o1", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                if (args.size() != 2) {
+                    std::cout << "Usage: o1 <id> - Optimize function bitcode using optimization level -O1" << std::endl;
+                    return;
+                }
+
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
+                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O1);
+            }},
+            // Optimize function bitcode using optimization level -O2: `o2 <id>`
+            {"o2", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                if (args.size() != 2) {
+                    std::cout << "Usage: o2 <id> - Optimize function bitcode using optimization level -O2" << std::endl;
+                    return;
+                }
+
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
+                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O2);
+            }},
+            // Optimize function bitcode using optimization level -O3: `o3 <id>`
+            {"o3", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                if (args.size() != 2) {
+                    std::cout << "Usage: o3 <id> - Optimize function bitcode using optimization level -O3" << std::endl;
+                    return;
+                }
+
+                magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
+                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O3);
             }},
     };
 
