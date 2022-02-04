@@ -77,6 +77,14 @@ enum class DeletionError {
     kFunctionInUse, // Function is still in use
 };
 
+enum class DevirtualizeError {
+    kInstructionNotFound, // Instruction not found
+    kNotACallBaseInstruction, // Not a CallBase instruction
+    kFunctionNotFound, // Function not found
+    kNotAIndirectCall, // Instruction do not refer to an indirect call
+    kArgNumMismatch, // Function takes a different number of parameter
+};
+
 class BitcodeExplorer {
 
 private:
@@ -167,6 +175,9 @@ public:
 
     // Delete a function that is not in use
     std::optional<DeletionError> DeleteFunction(ValueId function_id);
+
+    // Devirtualize an indirect function call into a direct one
+    Result <ValueId, DevirtualizeError> DevirtualizeFunction(ValueId instruction_id, ValueId function_id, ISubstitutionObserver &substitution_observer);
 
     // Returns the value ID for `function`, or `kInvalidValueId` if no ID is found.
     [[nodiscard]] ValueId GetId(const llvm::Function &function, ValueIdKind kind) const;

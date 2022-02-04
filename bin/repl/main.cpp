@@ -55,6 +55,7 @@ public:
                 {magnifier::SubstitutionKind::kArgument, "Argument"},
                 {magnifier::SubstitutionKind::kConstantFolding, "Constant folding"},
                 {magnifier::SubstitutionKind::kValueSubstitution, "Value substitution"},
+                {magnifier::SubstitutionKind::kFunctionDevirtualization, "Function devirtualization"},
         };
         tool_output.os() << "perform substitution: ";
         instr->print(tool_output.os());
@@ -144,6 +145,32 @@ int main(int argc, char **argv) {
                 magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
                 if (!explorer.PrintFunction(function_id, tool_output.os())) {
                     tool_output.os() << "Function not found: " << function_id << "\n";
+                }
+            }},
+            // Devirtualize function: `dc <instruction_id> <function_id>`
+            {"dc", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                static const std::map<magnifier::DevirtualizeError, std::string> devirtualize_error_map = {
+                        {magnifier::DevirtualizeError::kNotACallBaseInstruction, "Not a CallBase instruction"},
+                        {magnifier::DevirtualizeError::kInstructionNotFound,     "Instruction not found"},
+                        {magnifier::DevirtualizeError::kFunctionNotFound,        "Function not found"},
+                        {magnifier::DevirtualizeError::kNotAIndirectCall,        "Can only devirtualize indirect call"},
+                        {magnifier::DevirtualizeError::kArgNumMismatch,          "Function takes a different number of parameter"}
+                };
+
+                if (args.size() != 3) {
+                    tool_output.os() << "Usage: dc <instruction_id> <function_id> - Devirtualize function\n";
+                    return;
+                }
+
+                magnifier::ValueId instruction_id = std::stoul(args[1], nullptr, 10);
+                magnifier::ValueId function_id = std::stoul(args[2], nullptr, 10);
+                magnifier::Result<magnifier::ValueId, magnifier::DevirtualizeError> result = explorer.DevirtualizeFunction(instruction_id, function_id, substitution_observer);
+
+
+                if (result.Succeeded()) {
+                    explorer.PrintFunction(result.Value(), tool_output.os());
+                } else {
+                    tool_output.os() << "Devirtualize function call failed for id: " << instruction_id << " (error: " << devirtualize_error_map.at(result.Error()) << ")\n";
                 }
             }},
             // Delete function: `df! <function_id>`

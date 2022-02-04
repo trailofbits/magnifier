@@ -20,6 +20,7 @@ enum class SubstitutionKind {
     kArgument,
     kConstantFolding,
     kValueSubstitution,
+    kFunctionDevirtualization,
 };
 
 class ISubstitutionObserver {
