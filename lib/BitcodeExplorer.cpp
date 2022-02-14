@@ -57,6 +57,11 @@ static bool VerifyModule(llvm::Module *module, llvm::Function *function) {
         return true;
     }
 }
+
+bool ShouldAddAssumption(SubstitutionKind substitution_kind) {
+    return (substitution_kind == SubstitutionKind::kValueSubstitution || substitution_kind == SubstitutionKind::kFunctionDevirtualization);
+}
+
 }
 
 BitcodeExplorer::BitcodeExplorer(llvm::LLVMContext &llvm_context)
@@ -420,8 +425,8 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitu
         auto substitution_kind = static_cast<SubstitutionKind>(substitution_id);
         llvm::Value *updated_sub_val = substitution_observer.PerformSubstitution(inst, old_val, new_val,substitution_kind);
 
-        // Assume equivalence for value substitution
-        if (substitution_kind == SubstitutionKind::kValueSubstitution && updated_sub_val != old_val) {
+        // Assume equivalence for value substitution and function devirtualization
+        if (ShouldAddAssumption(substitution_kind) && updated_sub_val != old_val) {
             llvm::IRBuilder builder(inst);
             builder.CreateAssumption(builder.CreateCmp(llvm::CmpInst::ICMP_EQ, old_val, updated_sub_val));
         }
@@ -784,6 +789,93 @@ std::optional<DeletionError> BitcodeExplorer::DeleteFunction(ValueId function_id
     function->eraseFromParent();
 
     return std::nullopt;
+}
+
+Result <ValueId, DevirtualizeError> BitcodeExplorer::DevirtualizeFunction(ValueId instruction_id, ValueId function_id, ISubstitutionObserver &substitution_observer) {
+    // Find and check `instruction_id` is correctly referencing a `CallBase` instruction
+    auto instruction_pair = instruction_map.find(instruction_id);
+    if (instruction_pair == instruction_map.end()) {
+        return DevirtualizeError::kInstructionNotFound;
+    }
+
+    llvm::Instruction *instruction = cast_or_null<llvm::Instruction>(instruction_pair->second);
+    if (!instruction) {
+        return DevirtualizeError::kInstructionNotFound;
+    }
+
+    auto call_base = llvm::dyn_cast<llvm::CallBase>(instruction);
+
+    if (call_base == nullptr) {
+        return DevirtualizeError::kNotACallBaseInstruction;
+    }
+
+    if (!call_base->isIndirectCall()) {
+        return DevirtualizeError::kNotAIndirectCall;
+    }
+
+    // Find the function with `function_id`
+    auto function_pair = function_map.find(function_id);
+    if (function_pair == function_map.end()) {
+        return DevirtualizeError::kFunctionNotFound;
+    }
+
+    llvm::Function *direct_called_function = cast_or_null<llvm::Function>(function_pair->second);
+    if (!direct_called_function) {
+        return DevirtualizeError::kFunctionNotFound;
+    }
+
+    if (direct_called_function->arg_size() != call_base->getNumArgOperands()) {
+        return DevirtualizeError::kArgNumMismatch;
+    }
+
+    // Clone and modify the caller function
+    llvm::ValueToValueMapTy caller_value_map;
+    llvm::Function *cloned_caller_function = llvm::CloneFunction(call_base->getFunction(), caller_value_map);
+
+    llvm::CallBase *cloned_call_base = nullptr;
+    for (auto &cloned_instruction : llvm::instructions(cloned_caller_function)) {
+        if (this->GetId(cloned_instruction, ValueIdKind::kDerived) == instruction_id) {
+            cloned_call_base = llvm::dyn_cast<llvm::CallBase>(&cloned_instruction);
+        }
+    }
+    assert(cloned_call_base != nullptr);
+
+    // Here we add in a hook function call to better observe the substitutions that take place.
+    // The real value substitutions happen inside `ElideSubstitutionHooks`.
+    // For example, given a function:
+    //
+    // foo() {
+    //   ...
+    //   a = ...
+    //   call a
+    //   ...
+    // }
+    //
+    // We want to transform the it into:
+    //
+    // foo() {
+    //   ...
+    //   a = ...
+    //   temp_val = substitute_hook(a, direct_called_function)
+    //   call temp_val
+    //   ...
+    // }
+    //
+    // The first parameter of the hook function is the old value (`a`) and the second parameter is the new value - the function we are going to call directly  (`direct_called_function`).
+
+    llvm::CallInst *substitute_hook_call = CreateHookCallInst(cloned_call_base->getCalledOperand()->getType(), cloned_call_base->getModule(), SubstitutionKind::kFunctionDevirtualization, cloned_call_base->getCalledOperand(), direct_called_function);
+    substitute_hook_call->insertBefore(cloned_call_base);
+    cloned_call_base->setCalledOperand(substitute_hook_call);
+
+    MAG_DEBUG(VerifyModule(cloned_caller_function->getParent(), cloned_caller_function));
+
+    ElideSubstitutionHooks(*cloned_caller_function, substitution_observer);
+
+    UpdateMetadata(*cloned_caller_function);
+
+    MAG_DEBUG(VerifyModule(cloned_caller_function->getParent(), cloned_caller_function));
+
+    return GetId(*cloned_caller_function, ValueIdKind::kDerived);
 }
 
 BitcodeExplorer::~BitcodeExplorer() = default;

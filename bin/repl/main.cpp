@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <map>
+#include <unordered_map>
 #include <functional>
 #include <fstream>
 
@@ -50,11 +50,12 @@ public:
     explicit SubstitutionObserver(llvm::ToolOutputFile &tool_output): tool_output(tool_output) {};
 
     llvm::Value *PerformSubstitution(llvm::Instruction *instr, llvm::Value *old_val, llvm::Value *new_val, magnifier::SubstitutionKind kind) override {
-        static const std::map<magnifier::SubstitutionKind, std::string> substitution_kind_map = {
+        static const std::unordered_map<magnifier::SubstitutionKind, std::string> substitution_kind_map = {
                 {magnifier::SubstitutionKind::kReturnValue, "Return value"},
                 {magnifier::SubstitutionKind::kArgument, "Argument"},
                 {magnifier::SubstitutionKind::kConstantFolding, "Constant folding"},
                 {magnifier::SubstitutionKind::kValueSubstitution, "Value substitution"},
+                {magnifier::SubstitutionKind::kFunctionDevirtualization, "Function devirtualization"},
         };
         tool_output.os() << "perform substitution: ";
         instr->print(tool_output.os());
@@ -64,7 +65,7 @@ public:
 };
 
 void RunOptimization(magnifier::BitcodeExplorer &explorer, llvm::ToolOutputFile &tool_output, magnifier::ValueId function_id, llvm::PassBuilder::OptimizationLevel level) {
-    static const std::map<magnifier::OptimizationError, std::string> optimization_error_map = {
+    static const std::unordered_map<magnifier::OptimizationError, std::string> optimization_error_map = {
             {magnifier::OptimizationError::kInvalidOptimizationLevel, "The provided optimization level is not allowed"},
             {magnifier::OptimizationError::kIdNotFound, "Function id not found"},
     };
@@ -96,7 +97,7 @@ int main(int argc, char **argv) {
     FunctionResolver resolver{};
     SubstitutionObserver substitution_observer(tool_output);
 
-    std::map<std::string, std::function<void(const std::vector<std::string> &)>> cmd_map = {
+    std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> cmd_map = {
             // Load module: `lm <path>`
             {"lm", [&explorer, &llvm_exit_on_err, &llvm_context, &tool_output](const std::vector<std::string> &args) -> void {
                 if (args.size() != 2) {
@@ -146,9 +147,35 @@ int main(int argc, char **argv) {
                     tool_output.os() << "Function not found: " << function_id << "\n";
                 }
             }},
+            // Devirtualize function: `dc <instruction_id> <function_id>`
+            {"dc", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
+                static const std::unordered_map<magnifier::DevirtualizeError, std::string> devirtualize_error_map = {
+                        {magnifier::DevirtualizeError::kNotACallBaseInstruction, "Not a CallBase instruction"},
+                        {magnifier::DevirtualizeError::kInstructionNotFound,     "Instruction not found"},
+                        {magnifier::DevirtualizeError::kFunctionNotFound,        "Function not found"},
+                        {magnifier::DevirtualizeError::kNotAIndirectCall,        "Can only devirtualize indirect call"},
+                        {magnifier::DevirtualizeError::kArgNumMismatch,          "Function takes a different number of parameter"}
+                };
+
+                if (args.size() != 3) {
+                    tool_output.os() << "Usage: dc <instruction_id> <function_id> - Devirtualize function\n";
+                    return;
+                }
+
+                magnifier::ValueId instruction_id = std::stoul(args[1], nullptr, 10);
+                magnifier::ValueId function_id = std::stoul(args[2], nullptr, 10);
+                magnifier::Result<magnifier::ValueId, magnifier::DevirtualizeError> result = explorer.DevirtualizeFunction(instruction_id, function_id, substitution_observer);
+
+
+                if (result.Succeeded()) {
+                    explorer.PrintFunction(result.Value(), tool_output.os());
+                } else {
+                    tool_output.os() << "Devirtualize function call failed for id: " << instruction_id << " (error: " << devirtualize_error_map.at(result.Error()) << ")\n";
+                }
+            }},
             // Delete function: `df! <function_id>`
             {"df!", [&explorer, &tool_output](const std::vector<std::string> &args) -> void {
-                static const std::map<magnifier::DeletionError, std::string> deletion_error_map = {
+                static const std::unordered_map<magnifier::DeletionError, std::string> deletion_error_map = {
                         {magnifier::DeletionError::kIdNotFound, "Function id not found"},
                         {magnifier::DeletionError::kFunctionInUse, "Function is still in use"},
                 };
@@ -168,7 +195,7 @@ int main(int argc, char **argv) {
             }},
             // Inline function call: `ic <instruction_id>`
             {"ic", [&explorer, &tool_output, &resolver, &substitution_observer](const std::vector<std::string> &args) -> void {
-                static const std::map<magnifier::InlineError, std::string> inline_error_map = {
+                static const std::unordered_map<magnifier::InlineError, std::string> inline_error_map = {
                         {magnifier::InlineError::kNotACallBaseInstruction, "Not a CallBase instruction"},
                         {magnifier::InlineError::kInstructionNotFound,     "Instruction not found"},
                         {magnifier::InlineError::kCannotResolveFunction,   "Cannot resolve function"},
@@ -193,7 +220,7 @@ int main(int argc, char **argv) {
             }},
             // Substitute with value: `sv <id> <val>`
             {"sv", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
-                static const std::map<magnifier::SubstitutionError, std::string> substitution_error_map = {
+                static const std::unordered_map<magnifier::SubstitutionError, std::string> substitution_error_map = {
                         {magnifier::SubstitutionError::kIdNotFound,    "Instruction not found"},
                         {magnifier::SubstitutionError::kIncorrectType, "Instruction has non-integer type"},
                         {magnifier::SubstitutionError::kCannotUseFunctionId, "Expecting an instruction id instead of a function id"},
@@ -261,6 +288,7 @@ int main(int argc, char **argv) {
             }},
     };
 
+//    cmd_map["lm"](split("lm ../test.bc", ' '));
     while (true) {
         std::string input;
         tool_output.os() << ">> ";
@@ -274,7 +302,7 @@ int main(int argc, char **argv) {
 
         if (tokenized_input[0] == "exit") { break; }
 
-        std::map<std::string, std::function<void(const std::vector<std::string> &)>>::iterator cmd = cmd_map.find(tokenized_input[0]);
+        auto cmd = cmd_map.find(tokenized_input[0]);
         if (cmd != cmd_map.end()) {
             cmd->second(tokenized_input);
         } else {
