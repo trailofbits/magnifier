@@ -57,6 +57,11 @@ static bool VerifyModule(llvm::Module *module, llvm::Function *function) {
         return true;
     }
 }
+
+bool ShouldAddAssumption(SubstitutionKind substitution_kind) {
+    return (substitution_kind == SubstitutionKind::kValueSubstitution || substitution_kind == SubstitutionKind::kFunctionDevirtualization);
+}
+
 }
 
 BitcodeExplorer::BitcodeExplorer(llvm::LLVMContext &llvm_context)
@@ -421,7 +426,7 @@ void BitcodeExplorer::ElideSubstitutionHooks(llvm::Function &function, ISubstitu
         llvm::Value *updated_sub_val = substitution_observer.PerformSubstitution(inst, old_val, new_val,substitution_kind);
 
         // Assume equivalence for value substitution and function devirtualization
-        if ((substitution_kind == SubstitutionKind::kValueSubstitution || substitution_kind == SubstitutionKind::kFunctionDevirtualization) && updated_sub_val != old_val) {
+        if (ShouldAddAssumption(substitution_kind) && updated_sub_val != old_val) {
             llvm::IRBuilder builder(inst);
             builder.CreateAssumption(builder.CreateCmp(llvm::CmpInst::ICMP_EQ, old_val, updated_sub_val));
         }
