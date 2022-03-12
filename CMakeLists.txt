@@ -9,8 +9,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(magnifier)
 
+include("cmake/llvm.cmake")
+
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
+
+
+find_llvm(llvm "${LLVM_DIR}")
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
@@ -33,7 +38,7 @@ set_target_properties(magnifier
         )
 
 find_package(LLVM REQUIRED CONFIG)
-target_link_libraries(magnifier PUBLIC LLVM)
+target_link_libraries(magnifier PUBLIC llvm)
 target_compile_definitions(magnifier PUBLIC ${LLVM_DEFINITIONS})
 target_include_directories(magnifier SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS})
 target_link_directories(magnifier PUBLIC ${LLVM_LIBRARY_DIRS})
