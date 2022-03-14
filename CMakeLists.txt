@@ -9,6 +9,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(magnifier)
 
+include(GNUInstallDirs)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(PLATFORM_LINUX true)
 
@@ -42,7 +44,7 @@ set(magnifier_PUBLIC_HEADERS
         "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
         "${magnifier_PUBLIC_HEADER_DIR}/Result.h"
         "${magnifier_PUBLIC_HEADER_DIR}/IFunctionResolver.h"
-        "${magnifier_PUBLIC_HEADER_DIR}/ISubstitionObserver.h"
+        "${magnifier_PUBLIC_HEADER_DIR}/ISubstitutionObserver.h"
         )
 set_target_properties(magnifier
         PROPERTIES
@@ -125,6 +127,6 @@ if(MAGNIFIER_ENABLE_INSTALL)
       include
 
     PUBLIC_HEADER DESTINATION
-      "${CMAKE_INSTALL_INCLUDEDIR}/magnifier"
+        "${CMAKE_INSTALL_INCLUDEDIR}/magnifier"
   )
 endif(MAGNIFIER_ENABLE_INSTALL)
