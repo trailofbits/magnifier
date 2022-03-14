@@ -9,6 +9,17 @@
 cmake_minimum_required(VERSION 3.16)
 project(magnifier)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(PLATFORM_LINUX true)
+
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(PLATFORM_MACOS true)
+
+else()
+  message(FATAL_ERROR "Unsupported platform")
+endif()
+
+
 include("cmake/llvm.cmake")
 
 option(MAGNIFIER_ENABLE_INSTALL "Set to true to enable the install target" true)
@@ -95,3 +106,25 @@ if(MAGNIFIER_ENABLE_INSTALL)
       
 endif(MAGNIFIER_ENABLE_INSTALL)
       
+
+if(MAGNIFIER_ENABLE_INSTALL)
+  install(
+    TARGETS
+      magnifier
+
+    EXPORT
+    magnifierTargets
+
+    LIBRARY DESTINATION
+      lib
+
+    ARCHIVE DESTINATION
+      lib
+
+    INCLUDES DESTINATION
+      include
+
+    PUBLIC_HEADER DESTINATION
+      "${CMAKE_INSTALL_INCLUDEDIR}/magnifier"
+  )
+endif(MAGNIFIER_ENABLE_INSTALL)
