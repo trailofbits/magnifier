@@ -34,6 +34,7 @@ find_llvm(llvm "${LLVM_DIR}")
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
+        lib/ISubstitutionObserver.cpp
         lib/IdCommentWriter.cpp
         lib/IdCommentWriter.h
         )

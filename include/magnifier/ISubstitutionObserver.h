@@ -11,21 +11,31 @@
 namespace llvm {
 class Value;
 class Instruction;
-}
+}  // namespace llvm
 
 namespace magnifier {
 
 enum class SubstitutionKind {
-    kReturnValue = 1,
-    kArgument,
-    kConstantFolding,
-    kValueSubstitution,
-    kFunctionDevirtualization,
+  kReturnValue = 1,
+  kArgument,
+  kConstantFolding,
+  kValueSubstitution,
+  kFunctionDevirtualization,
 };
 
 class ISubstitutionObserver {
-public:
-    virtual llvm::Value *PerformSubstitution(llvm::Instruction *instr, llvm::Value *old_val, llvm::Value *new_val, SubstitutionKind kind) = 0;
+ public:
+  virtual llvm::Value *PerformSubstitution(llvm::Instruction *instr,
+                                           llvm::Value *old_val,
+                                           llvm::Value *new_val,
+                                           SubstitutionKind kind) = 0;
 };
 
-}
+class NullSubstitutionObserver : public ISubstitutionObserver {
+  virtual llvm::Value *PerformSubstitution(llvm::Instruction *instr,
+                                           llvm::Value *old_val,
+                                           llvm::Value *new_val,
+                                           SubstitutionKind kind) override;
+};
+
+}  // namespace magnifier

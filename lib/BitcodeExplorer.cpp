@@ -989,5 +989,20 @@ Result<ValueId, DevirtualizeError> BitcodeExplorer::DevirtualizeFunction(
   return GetId(*cloned_caller_function, ValueIdKind::kDerived);
 }
 
+std::optional<llvm::Function *> BitcodeExplorer::GetFunctionById(ValueId id) {
+  auto res = this->function_map.find(id);
+  if (res != this->function_map.end()) {
+    if (auto f = llvm::cast_or_null<llvm::Function>(res->second)) {
+      return f;
+    } else {
+      return std::nullopt;
+    }
+  } else {
+    return std::nullopt;
+  }
+}
+
+ValueId BitcodeExplorer::MaxCurrentID() { return this->value_id_counter - 1; }
+
 BitcodeExplorer::~BitcodeExplorer() = default;
 }  // namespace magnifier
