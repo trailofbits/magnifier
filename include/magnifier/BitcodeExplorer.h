@@ -110,7 +110,7 @@ class BitcodeExplorer {
   const unsigned md_explorer_substitution_kind_id;
   // Annotator object used for annotating function disassembly. It prints the
   // various metadata attached to each value.
-  const std::unique_ptr<llvm::AssemblyAnnotationWriter> annotator;
+  std::unique_ptr<llvm::AssemblyAnnotationWriter> annotator;
   // This is a vector of all the llvm `Module` objects ingested using
   // `TakeModule`.
   std::vector<std::unique_ptr<llvm::Module>> opened_modules;
@@ -129,11 +129,6 @@ class BitcodeExplorer {
   // during an operation. It should be cleared at the end of any high-level
   // operation.
   std::map<llvm::Type *, llvm::FunctionCallee> hook_functions;
-
-  // Update/index a function by adding various metadata to function,
-  // instruction, and block values. Also update `function_map`,
-  // `instruction_map`, and `block_map` to reflect the changes.
-  void UpdateMetadata(llvm::Function &function);
 
   // Elide all substitute hooks present in `function`. Uses
   // `substitute_value_func` to guide the substitution process
@@ -158,8 +153,15 @@ class BitcodeExplorer {
                                      llvm::Value *old_val,
                                      llvm::Value *new_val);
 
+  // Update/index a function by adding various metadata to function,
+  // instruction, and block values. Also update `function_map`,
+  // `instruction_map`, and `block_map` to reflect the changes.
+  void UpdateMetadata(llvm::Function &function);
+
  public:
   explicit BitcodeExplorer(llvm::LLVMContext &llvm_context);
+
+  BitcodeExplorer(BitcodeExplorer &&) = default;
 
   ~BitcodeExplorer();
 
@@ -228,5 +230,8 @@ class BitcodeExplorer {
   ValueId MaxCurrentID();
 
   std::optional<llvm::Function *> GetFunctionById(ValueId);
+
+  // Either gets the current id for a function or indexes the function.
+  ValueId IndexFunction(llvm::Function &function);
 };
 }  // namespace magnifier

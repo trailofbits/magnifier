@@ -1002,7 +1002,18 @@ std::optional<llvm::Function *> BitcodeExplorer::GetFunctionById(ValueId id) {
   }
 }
 
-ValueId BitcodeExplorer::MaxCurrentID() { return this->value_id_counter - 1; }
+ValueId BitcodeExplorer::IndexFunction(llvm::Function &function) {
+  auto res = GetId(function, ValueIdKind::kDerived);
+  if (res == kInvalidValueId) {
+    UpdateMetadata(function);
+    return GetId(function, ValueIdKind::kDerived);
+  }
+
+  return res;
+}
+
+ValueId BitcodeExplorer::MaxCurrentID() { return this->value_id_counter; }
 
 BitcodeExplorer::~BitcodeExplorer() = default;
+
 }  // namespace magnifier
