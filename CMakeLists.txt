@@ -107,10 +107,6 @@ if(MAGNIFIER_ENABLE_INSTALL)
             "${PROJECT_NAME}Targets"
         )
       
-endif(MAGNIFIER_ENABLE_INSTALL)
-      
-
-if(MAGNIFIER_ENABLE_INSTALL)
   install(
     TARGETS
       magnifier
