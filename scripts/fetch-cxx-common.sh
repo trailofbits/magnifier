@@ -44,12 +44,13 @@ function setup_env {
 }
 
 function install_cxx_common {
-  if [[ ! -f "${ROOT_DIR}/downloads/cxx-common.tar.xz" ]]
+  local base_dir=${1}
+  if [[ ! -f "${base_dir}/cxx-common.tar.xz" ]]
   then
     log_msg "Fetching cxx-common from Github"
     URL="https://github.com/lifting-bits/cxx-common/releases/latest/download/${CXX_COMMON_NAME}.tar.xz"
     GITHUB_LIBS="cxx-common.tar.xz"
-    pushd "${ROOT_DIR}/downloads" >/dev/null
+    pushd "${base_dir}" >/dev/null
     log_msg "Fetching: ${URL} to [$(pwd)/${GITHUB_LIBS}]"
     curl -sS -o "${GITHUB_LIBS}" -L "${URL}" \
       >> ${LOG_FILE} 2>&1
@@ -58,9 +59,9 @@ function install_cxx_common {
     popd >/dev/null
   fi
 
-  export VCPKG_ROOT="${ROOT_DIR}/downloads/${CXX_COMMON_NAME}"
+  export VCPKG_ROOT="${base_dir}/${CXX_COMMON_NAME}"
 }
 
-mkdir -p ${ROOT_DIR}/downloads
 setup_env
-install_cxx_common
+mkdir -p "${ROOT_DIR}/../downloads"
+install_cxx_common "${ROOT_DIR}/../downloads"

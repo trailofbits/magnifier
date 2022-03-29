@@ -59,7 +59,7 @@ jobs:
           scripts/build-preset.sh debug
         env:
           INSTALL_DIR_PART: ../magnifier-install
-          VCPKG_ROOT_PART: downloads/vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_llvm-${{ matrix.llvm }}_amd64
+          VCPKG_ROOT_PART: ../downloads/vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_llvm-${{ matrix.llvm }}_amd64
 
   build_mac:
     strategy:
@@ -92,4 +92,4 @@ jobs:
           scripts/build-preset.sh debug -- -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
         env:
           INSTALL_DIR_PART: ../magnifier-install
-          VCPKG_ROOT_PART: downloads/vcpkg_${matrix.os}_llvm-${{ matrix.llvm }}_xcode-13.0_amd64
+          VCPKG_ROOT_PART: downloads/vcpkg_${{ matrix.os }}_llvm-${{ matrix.llvm }}_xcode-13.0_amd64
