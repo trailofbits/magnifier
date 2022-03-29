@@ -113,9 +113,13 @@ if(MAGNIFIER_ENABLE_INSTALL)
   install(
     TARGETS
       magnifier
+      repl
 
     EXPORT
     magnifierTargets
+
+    RUNTIME DESTINATION
+      bin
 
     LIBRARY DESTINATION
       lib
