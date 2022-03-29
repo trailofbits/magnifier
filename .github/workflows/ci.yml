@@ -54,11 +54,12 @@ jobs:
         shell: bash
         run: |
           export INSTALL_DIR=${GITHUB_WORKSPACE}/${INSTALL_DIR_PART}
-          # fetch-cxx-common will export VCPKG_ROOT for us
+          export VCPKG_ROOT=${GITHUB_WORKSPACE}/${VCPKG_ROOT_PART}
           scripts/fetch-cxx-common.sh
           scripts/build-preset.sh debug
         env:
           INSTALL_DIR_PART: ../magnifier-install
+          VCPKG_ROOT_PART: downloads/vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_llvm-${{ matrix.llvm }}_amd64
 
   build_mac:
     strategy:
@@ -77,12 +78,18 @@ jobs:
           fetch-depth: 0
           submodules: true
 
+      - name: Install utility tools
+        shell: bash
+        run: |
+          brew install coreutils
+
       - name: Build with CMake Presets
         shell: bash
         run: |
           export INSTALL_DIR=${GITHUB_WORKSPACE}/${INSTALL_DIR_PART}
-          # fetch-cxx-common will export VCPKG_ROOT for us
+          export VCPKG_ROOT=${GITHUB_WORKSPACE}/${VCPKG_ROOT_PART}
           scripts/fetch-cxx-common.sh
           scripts/build-preset.sh debug -- -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
         env:
           INSTALL_DIR_PART: ../magnifier-install
+          VCPKG_ROOT_PART: downloads/vcpkg_${matrix.os}_llvm-${{ matrix.llvm }}_xcode-13.0_amd64
