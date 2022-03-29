@@ -81,7 +81,7 @@ jobs:
       - name: Install utility tools
         shell: bash
         run: |
-          brew install coreutils
+          brew install coreutils ninja
 
       - name: Build with CMake Presets
         shell: bash
