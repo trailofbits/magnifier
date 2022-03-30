@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <functional>
 #include <fstream>
+#include <filesystem>
 
 std::vector<std::string> split(const std::string &input, char delimiter) {
     std::stringstream ss(input);

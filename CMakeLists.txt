@@ -7,6 +7,9 @@
 #
 
 cmake_minimum_required(VERSION 3.16)
+include("cmake/options.cmake")
+include("cmake/vcpkg_helper.cmake")
+
 project(magnifier)
 
 include(GNUInstallDirs)
@@ -30,7 +33,7 @@ list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
 
 
-find_llvm(llvm "${LLVM_DIR}")
+find_llvm(llvm)
 
 add_library(magnifier STATIC
         lib/BitcodeExplorer.cpp
@@ -69,7 +72,7 @@ target_include_directories(magnifier
 
 add_executable(repl)
 target_sources(repl PRIVATE bin/repl/main.cpp)
-target_link_libraries(repl PRIVATE magnifier)
+target_link_libraries(repl PRIVATE magnifier std::filesystem)
 target_include_directories(repl
         PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -110,9 +113,13 @@ if(MAGNIFIER_ENABLE_INSTALL)
   install(
     TARGETS
       magnifier
+      repl
 
     EXPORT
     magnifierTargets
+
+    RUNTIME DESTINATION
+      bin
 
     LIBRARY DESTINATION
       lib

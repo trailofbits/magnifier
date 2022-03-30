@@ -1,6 +1,7 @@
 .idea/
 *build*/
 CMakeFiles/
+downloads/
 
 *.bc
 .DS_Store
@@ -8,3 +9,4 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+*.log
