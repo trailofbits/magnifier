@@ -57,7 +57,8 @@ set_target_properties(magnifier
         )
 
 find_package(LLVM REQUIRED CONFIG)
-target_link_libraries(magnifier PUBLIC llvm)
+find_package(Z3)
+target_link_libraries(magnifier PUBLIC llvm z3::libz3)
 target_compile_definitions(magnifier PUBLIC ${LLVM_DEFINITIONS})
 target_include_directories(magnifier SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS})
 target_link_directories(magnifier PUBLIC ${LLVM_LIBRARY_DIRS})
@@ -72,7 +73,7 @@ target_include_directories(magnifier
 
 add_executable(repl)
 target_sources(repl PRIVATE bin/repl/main.cpp)
-target_link_libraries(repl PRIVATE magnifier std::filesystem)
+target_link_libraries(repl PRIVATE magnifier std::filesystem z3::libz3)
 target_include_directories(repl
         PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
