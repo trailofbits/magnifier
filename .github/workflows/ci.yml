@@ -58,6 +58,7 @@ jobs:
           scripts/fetch-cxx-common.sh
           scripts/build-preset.sh debug
         env:
+          LLVM: ${{ matrix.llvm }}
           INSTALL_DIR_PART: ../magnifier-install
           VCPKG_ROOT_PART: ../downloads/vcpkg_${{ matrix.image.name }}-${{ matrix.image.tag }}_llvm-${{ matrix.llvm }}_amd64
 
@@ -68,7 +69,7 @@ jobs:
         os: [
           'macos-11'
           ]
-        llvm: [ '13' ]
+        llvm: [ '14' ]
 
     runs-on: ${{ matrix.os }}
 
@@ -91,5 +92,6 @@ jobs:
           scripts/fetch-cxx-common.sh
           scripts/build-preset.sh debug -- -DCMAKE_C_COMPILER=$(which clang) -DCMAKE_CXX_COMPILER=$(which clang++)
         env:
+          LLVM: ${{ matrix.llvm }}
           INSTALL_DIR_PART: ../magnifier-install
           VCPKG_ROOT_PART: ../downloads/vcpkg_${{ matrix.os }}_llvm-${{ matrix.llvm }}_xcode-13.0_amd64

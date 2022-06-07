@@ -5,7 +5,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 ROOT_DIR="$(realpath ${DIR}/..)"
 LOG_FILE=${ROOT_DIR}/cxx-common.log
 PLATFORM=$(uname -m)
-LLVM=${LLVM:-13}
+LLVM=${LLVM:-14}
 
 function log_msg {
     echo "${1}"
