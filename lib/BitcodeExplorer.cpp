@@ -780,8 +780,8 @@ Result<ValueId, SubstitutionError> BitcodeExplorer::SubstituteArgumentWithValue(
 
 Result<ValueId, OptimizationError> BitcodeExplorer::OptimizeFunction(
     ValueId function_id,
-    const llvm::PassBuilder::OptimizationLevel &optimization_level) {
-  if (optimization_level == llvm::PassBuilder::OptimizationLevel::O0) {
+    const llvm::OptimizationLevel &optimization_level) {
+  if (optimization_level == llvm::OptimizationLevel::O0) {
     return OptimizationError::kInvalidOptimizationLevel;
   }
 
@@ -925,7 +925,7 @@ Result<ValueId, DevirtualizeError> BitcodeExplorer::DevirtualizeFunction(
     return DevirtualizeError::kFunctionNotFound;
   }
 
-  if (direct_called_function->arg_size() != call_base->getNumArgOperands()) {
+  if (direct_called_function->arg_size() != call_base->arg_size()) {
     return DevirtualizeError::kArgNumMismatch;
   }
 
