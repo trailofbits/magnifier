@@ -194,7 +194,7 @@ class BitcodeExplorer {
   // Optimize a function using a certain `optimization_level`
   Result<ValueId, OptimizationError> OptimizeFunction(
       ValueId function_id,
-      const llvm::PassBuilder::OptimizationLevel &optimization_level);
+      const llvm::OptimizationLevel &optimization_level);
 
   // Delete a function that is not in use
   std::optional<DeletionError> DeleteFunction(ValueId function_id);

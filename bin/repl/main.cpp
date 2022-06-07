@@ -65,7 +65,7 @@ public:
     }
 };
 
-void RunOptimization(magnifier::BitcodeExplorer &explorer, llvm::ToolOutputFile &tool_output, magnifier::ValueId function_id, llvm::PassBuilder::OptimizationLevel level) {
+void RunOptimization(magnifier::BitcodeExplorer &explorer, llvm::ToolOutputFile &tool_output, magnifier::ValueId function_id, llvm::OptimizationLevel level) {
     static const std::unordered_map<magnifier::OptimizationError, std::string> optimization_error_map = {
             {magnifier::OptimizationError::kInvalidOptimizationLevel, "The provided optimization level is not allowed"},
             {magnifier::OptimizationError::kIdNotFound, "Function id not found"},
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
                 }
 
                 magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
-                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O1);
+                RunOptimization(explorer, tool_output, function_id, llvm::OptimizationLevel::O1);
             }},
             // Optimize function bitcode using optimization level -O2: `o2 <id>`
             {"o2", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
                 }
 
                 magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
-                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O2);
+                RunOptimization(explorer, tool_output, function_id, llvm::OptimizationLevel::O2);
             }},
             // Optimize function bitcode using optimization level -O3: `o3 <id>`
             {"o3", [&explorer, &tool_output, &substitution_observer](const std::vector<std::string> &args) -> void {
@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
                 }
 
                 magnifier::ValueId function_id = std::stoul(args[1], nullptr, 10);
-                RunOptimization(explorer, tool_output, function_id, llvm::PassBuilder::OptimizationLevel::O3);
+                RunOptimization(explorer, tool_output, function_id, llvm::OptimizationLevel::O3);
             }},
     };
 
