@@ -28,6 +28,7 @@ endif()
 include("cmake/llvm.cmake")
 
 option(MAGNIFIER_ENABLE_INSTALL "Set to true to enable the install target" true)
+option(MAGNIFIER_ENABLE_UI      "Set to true to enable the magnifier-ui target" OFF)
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
@@ -42,7 +43,7 @@ add_library(magnifier STATIC
         lib/IdCommentWriter.h
         )
 
-target_compile_features(magnifier PUBLIC cxx_std_17)
+target_compile_features(magnifier PUBLIC cxx_std_20)
 set(magnifier_PUBLIC_HEADER_DIR "${PROJECT_SOURCE_DIR}/include/magnifier")
 set(magnifier_PUBLIC_HEADERS
         "${magnifier_PUBLIC_HEADER_DIR}/BitcodeExplorer.h"
@@ -82,6 +83,35 @@ target_include_directories(repl
         "${CMAKE_CURRENT_SOURCE_DIR}"
         )
 
+if(MAGNIFIER_ENABLE_UI)
+    add_executable(magnifier-ui)
+    target_sources(magnifier-ui PRIVATE
+            bin/magnifier-ui/main.cpp
+            bin/magnifier-ui/DeclPrinter.cpp
+            bin/magnifier-ui/StmtPrinter.cpp
+            bin/magnifier-ui/TypePrinter.cpp)
+    target_link_libraries(magnifier-ui PRIVATE magnifier)
+    target_include_directories(magnifier-ui
+            PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+            $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+            PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            )
+
+    find_path(UWEBSOCKETS_INCLUDE_DIRS "uwebsockets/App.h")
+    target_include_directories(magnifier-ui PRIVATE ${UWEBSOCKETS_INCLUDE_DIRS})
+
+    find_library(USOCKETS_LIB uSockets)
+    target_link_libraries(magnifier-ui PRIVATE ${USOCKETS_LIB})
+
+    find_library(UV_LIB uv)
+    target_link_libraries(magnifier-ui PRIVATE ${UV_LIB})
+
+    find_package(rellic CONFIG REQUIRED)
+    target_link_libraries(magnifier-ui PRIVATE rellic::rellic)
+endif(MAGNIFIER_ENABLE_UI)
 
 if(MAGNIFIER_ENABLE_INSTALL)
         export(PACKAGE "${PROJECT_NAME}")
