@@ -1,9 +1,11 @@
+import config from '~/config'
+
 export default ({ app }, inject) => {
   let socket
 
   inject('socket', {
     init () {
-      this._socket = new WebSocket('ws://localhost:9001/ws')
+      this._socket = new WebSocket(config.webSocketAddr)
       // Connection opened
       this._socket.addEventListener('open', function (event) {
         console.log('socket opened!')

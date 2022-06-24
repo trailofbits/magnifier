@@ -206,31 +206,31 @@ void RunOptimization(magnifier::BitcodeExplorer &explorer, llvm::raw_ostream &to
 llvm::json::Object HandleRequest(UserData *data, const llvm::json::Object &json) {
     static std::unordered_map<std::string, std::function<llvm::json::Value(UserData *, const llvm::json::Object &, const std::vector<std::string> &)>> cmd_map = {
             // Load module: `lm <path>`
-            {"lm", [](UserData *data, const llvm::json::Object &json, const std::vector<std::string> &args) -> llvm::json::Value {
-                llvm::ExitOnError llvm_exit_on_err;
-                llvm_exit_on_err.setBanner("llvm error: ");
+            // {"lm", [](UserData *data, const llvm::json::Object &json, const std::vector<std::string> &args) -> llvm::json::Value {
+            //     llvm::ExitOnError llvm_exit_on_err;
+            //     llvm_exit_on_err.setBanner("llvm error: ");
 
-                if (args.size() != 2) {
-                    return "Usage: lm <path> - Load/open an LLVM .bc or .ll module\n";
-                }
-                const std::string &filename = args[1];
-                const std::filesystem::path file_path = std::filesystem::path(filename);
+            //     if (args.size() != 2) {
+            //         return "Usage: lm <path> - Load/open an LLVM .bc or .ll module\n";
+            //     }
+            //     const std::string &filename = args[1];
+            //     const std::filesystem::path file_path = std::filesystem::path(filename);
 
-                if (!std::filesystem::exists(file_path) || !std::filesystem::is_regular_file(file_path)) {
-                    return "Unable to open file: " + filename + "\n";
-                }
+            //     if (!std::filesystem::exists(file_path) || !std::filesystem::is_regular_file(file_path)) {
+            //         return "Unable to open file: " + filename + "\n";
+            //     }
 
-                std::unique_ptr<llvm::MemoryBuffer> llvm_memory_buffer = llvm_exit_on_err(
-                        errorOrToExpected(llvm::MemoryBuffer::getFileOrSTDIN(filename)));
-                llvm::BitcodeFileContents llvm_bitcode_contents = llvm_exit_on_err(
-                        llvm::getBitcodeFileContents(*llvm_memory_buffer));
+            //     std::unique_ptr<llvm::MemoryBuffer> llvm_memory_buffer = llvm_exit_on_err(
+            //             errorOrToExpected(llvm::MemoryBuffer::getFileOrSTDIN(filename)));
+            //     llvm::BitcodeFileContents llvm_bitcode_contents = llvm_exit_on_err(
+            //             llvm::getBitcodeFileContents(*llvm_memory_buffer));
 
-                for (auto &llvm_mod: llvm_bitcode_contents.Mods) {
-                    std::unique_ptr<llvm::Module> mod = llvm_exit_on_err(llvm_mod.parseModule(*data->llvm_context));
-                    data->explorer->TakeModule(std::move(mod));
-                }
-                return "Successfully loaded: " + filename + "\n";
-            }},
+            //     for (auto &llvm_mod: llvm_bitcode_contents.Mods) {
+            //         std::unique_ptr<llvm::Module> mod = llvm_exit_on_err(llvm_mod.parseModule(*data->llvm_context));
+            //         data->explorer->TakeModule(std::move(mod));
+            //     }
+            //     return "Successfully loaded: " + filename + "\n";
+            // }},
             // List functions: `lf`
             {"lf", [](UserData *data, const llvm::json::Object &json, const std::vector<std::string> &args) -> llvm::json::Value {
                 if (args.size() != 1) {
@@ -633,10 +633,6 @@ int main(int argc, char **argv) {
             UserData *data = ws->getUserData();
             data->llvm_context = std::make_unique<llvm::LLVMContext>();
             data->explorer = std::make_unique<magnifier::BitcodeExplorer>(*data->llvm_context);
-            HandleRequest(data, llvm::json::Object{
-                    {"cmd", "lm ../simple-test_reg2mem.bc"},
-                    {"usage", "internal"}
-            });
         },
 
         .message = [](auto *ws, std::string_view message, uWS::OpCode opCode) {
