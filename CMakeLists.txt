@@ -28,6 +28,7 @@ endif()
 include("cmake/llvm.cmake")
 
 option(MAGNIFIER_ENABLE_INSTALL "Set to true to enable the install target" true)
+option(MAGNIFIER_ENABLE_WEBUI   "Set to true to enable the web ui target" OFF)
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Filesystem REQUIRED)
@@ -82,34 +83,35 @@ target_include_directories(repl
         "${CMAKE_CURRENT_SOURCE_DIR}"
         )
 
+if(MAGNIFIER_ENABLE_WEBUI)
+    add_executable(web-ui)
+    target_sources(web-ui PRIVATE
+            bin/web-ui/main.cpp
+            bin/web-ui/DeclPrinter.cpp
+            bin/web-ui/StmtPrinter.cpp
+            bin/web-ui/TypePrinter.cpp)
+    target_link_libraries(web-ui PRIVATE magnifier)
+    target_include_directories(web-ui
+            PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+            $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+            PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            )
 
-add_executable(web-ui)
-target_sources(web-ui PRIVATE
-        bin/web-ui/main.cpp
-        bin/web-ui/DeclPrinter.cpp
-        bin/web-ui/StmtPrinter.cpp
-        bin/web-ui/TypePrinter.cpp)
-target_link_libraries(web-ui PRIVATE magnifier)
-target_include_directories(web-ui
-        PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-        PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        )
+    find_path(UWEBSOCKETS_INCLUDE_DIRS "uwebsockets/App.h")
+    target_include_directories(web-ui PRIVATE ${UWEBSOCKETS_INCLUDE_DIRS})
 
-find_path(UWEBSOCKETS_INCLUDE_DIRS "uwebsockets/App.h")
-target_include_directories(web-ui PRIVATE ${UWEBSOCKETS_INCLUDE_DIRS})
+    find_library(USOCKETS_LIB uSockets)
+    target_link_libraries(web-ui PRIVATE ${USOCKETS_LIB})
 
-find_library(USOCKETS_LIB uSockets)
-target_link_libraries(web-ui PRIVATE ${USOCKETS_LIB})
+    find_library(UV_LIB uv)
+    target_link_libraries(web-ui PRIVATE ${UV_LIB})
 
-find_library(UV_LIB uv)
-target_link_libraries(web-ui PRIVATE ${UV_LIB})
-
-find_package(rellic CONFIG REQUIRED)
-target_link_libraries(web-ui PRIVATE rellic::rellic)
+    find_package(rellic CONFIG REQUIRED)
+    target_link_libraries(web-ui PRIVATE rellic::rellic)
+endif(MAGNIFIER_ENABLE_WEBUI)
 
 if(MAGNIFIER_ENABLE_INSTALL)
         export(PACKAGE "${PROJECT_NAME}")
