@@ -1,7 +1,6 @@
 export default ({ app }, inject) => {
-  // Inject $hello(msg) in Vue, context and store.
   let socket
-  // console.log(app)
+
   inject('socket', {
     init () {
       this._socket = new WebSocket('ws://localhost:9001/ws')
@@ -24,7 +23,6 @@ export default ({ app }, inject) => {
 
         if (data.message) {
           console.log('Message from server ', data.message)
-          // app.store.dispatch('updateFuncs')
           return
         }
         app.store.dispatch('parseWsData', data)

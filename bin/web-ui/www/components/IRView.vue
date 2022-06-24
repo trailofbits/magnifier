@@ -1,6 +1,8 @@
 <template>
   <div>
-    <h1 class="main-label text-lg my-2">LLVM IR (Function Id {{$store.state.currentFuncId}} - {{$store.state.funcs[$store.state.currentFuncId]}})</h1>
+    <h1 class="main-label text-lg my-2">
+      LLVM IR (Function Id {{ $store.state.currentFuncId }} - {{ $store.state.funcs[$store.state.currentFuncId] }})
+    </h1>
     <div class="overflow-y-scroll h-full">
       <pre ref="llvm" v-html="$store.state.currentFuncIRContent" />
     </div>
@@ -40,8 +42,9 @@ export default {
           el?.classList?.remove('selected')
         }
         span.classList.add('selected')
-        for (const el of document.querySelectorAll(`[data-provenance="${span.id}"]`) ?? []) {
-          el?.classList?.add('selected')
+        for (const prov of this.$store.state.currentProvenanceMap[span.id] ?? []) {
+          const provenanceSpan = document.getElementById(prov)
+          provenanceSpan?.classList?.add('selected')
         }
         this.$store.commit('setCurrentIRSelection', { id: span.textContent.match(/^(\d+)\|(\d+)/m)[1] })
       })

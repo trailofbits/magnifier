@@ -57,7 +57,6 @@ export const mutations = {
         newMap[toHex].push(fromHex)
       }
     }
-    console.log(newMap)
     Vue.set(state, 'currentProvenanceMap', newMap)
   }
 }
@@ -85,8 +84,6 @@ export const actions = {
       if (!state.funcs[id]) { newFunctions.push(id) }
       if (id <= state.currentFuncId) { funcPrecedingCurr = id }
     })
-    console.log(output)
-    console.log(updateFuncList)
 
     await commit('setFuncs', { funcs: updateFuncList })
 
@@ -127,7 +124,6 @@ export const actions = {
     await dispatch('updateFuncContent')
   },
   async evalCommand ({ commit, dispatch }, { cmd }) {
-    console.log(cmd)
     await commit('appendTerminalOutput', { text: `> ${cmd}\n` })
     const { output } = await this.$socket.send({
       cmd

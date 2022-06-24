@@ -1,11 +1,13 @@
 <template>
   <div>
-    <h1 class="main-label text-lg my-2">Rellic Decompiled Result</h1>
+    <h1 class="main-label text-lg my-2">
+      Rellic Decompiled Result
+    </h1>
     <!-- <vue-code-highlight class="overflow-y-scroll">
       <pre >{{currentFuncDecompiledContent}}</pre>
     </vue-code-highlight> -->
     <div class="overflow-scroll h-full">
-      <pre ref="clang" v-html="$store.state.currentFuncDecompiledContent"/>
+      <pre ref="clang" v-html="$store.state.currentFuncDecompiledContent" />
     </div>
   </div>
 </template>
@@ -16,9 +18,7 @@ export default {
     this.$parent.$el.style.overflow = 'scroll'
   },
   updated () {
-    console.log(this.$refs.llvm)
     const spans = this.$refs.clang.querySelectorAll('.clang[id]')
-    console.log(spans)
     for (const span of spans) {
       span.addEventListener('mouseover', (e) => {
         e.stopImmediatePropagation()
@@ -45,11 +45,11 @@ export default {
         const provenances = this.$store.state.currentProvenanceMap[span.id] ?? []
         if (provenances.length <= 0) { return }
 
-        span.classList.add('selected')
         const provenanceSpan = document.getElementById(provenances[0])
-        console.log(provenanceSpan)
-        provenanceSpan.classList.add('selected')
+        if (provenanceSpan === null) { return }
 
+        provenanceSpan.classList.add('selected')
+        span.classList.add('selected')
         this.$store.commit('setCurrentIRSelection', { id: provenanceSpan.textContent.match(/^(\d+)\|(\d+)/m)[1] })
       })
     }
