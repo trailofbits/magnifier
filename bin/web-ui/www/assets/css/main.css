@@ -1,0 +1,43 @@
+@import "golden-layout/dist/css/goldenlayout-base.css";
+@import "golden-layout/dist/css/themes/goldenlayout-dark-theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#main-window {
+    color: #fff;
+    font-family: "Fira Code";
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.hover {
+    background-color: rgb(167 243 208);
+    color: #000;
+}
+
+.main-label {
+    color: #b4dfff;
+    font-weight: 500;
+}
+
+.sub-window {
+    background: #2f4858;
+
+
+}
+
+.active {
+    background-color: #68D391;
+}
+
+.selected {
+    background-color: #b4dfff;
+    color: #000;
+}
+
+.highlight-color {
+    background-color: #b4dfff;
+    color: #000;
+}
