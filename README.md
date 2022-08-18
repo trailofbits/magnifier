@@ -44,3 +44,7 @@ Build success!
 Installing [dbg] [x64]...
 Install success!
 ```
+
+## Running Magnifier UI
+
+See the instructions [here](bin/magnifier-ui#magnifierui).
