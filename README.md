@@ -1,4 +1,6 @@
-# magnifier
+# Magnifier
+
+Magnifier is an experimental reverse engineering user interface. Magnifier asks, “What if, as an alternative to taking handwritten notes, reverse engineering researchers could interactively reshape a decompiled program to reflect what they would normally record?” With Magnifier, the decompiled C code isn’t the end—it’s the beginning. Read more about how Magnifier can be used in the [blog post announcing its release](https://blog.trailofbits.com/2022/08/25/magnifier-an-experiment-with-interactive-decompilation/).
 
 ## Building Magnifier using Presets and cxx-common
 
