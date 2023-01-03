@@ -15,7 +15,7 @@
     "@vue/composition-api": "^1.4.9",
     "core-js": "^3.15.1",
     "golden-layout": "^2.5.0",
-    "nuxt": "^2.15.7"
+    "nuxt": "^3.0.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.14.7",
